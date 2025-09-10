@@ -1,0 +1,71 @@
+:root{--bg:#0b1021;--bg-soft:#12183a;--card:#0f1631;--text:#f5f7ff;--muted:#c9d0ff;--accent:#ffcc01;--accent-2:#e3350d;--accent-3:#3b4cca;--ok:#34c759;--err:#ff3b30;--shadow:0 8px 24px rgba(16,24,40,.35)}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:linear-gradient(180deg,var(--bg) 0%,#0d1230 100%);color:var(--text);-webkit-font-smoothing:antialiased}
+
+.container{max-width:960px;margin:0 auto;padding:16px}
+
+.site-header{position:sticky;top:0;z-index:10;background:
+  linear-gradient(90deg,var(--accent-3) 0%,#5b6df8 40%,#ff4757 80%,var(--accent-2) 100%);
+  box-shadow:var(--shadow)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand h1{font-family:"Luckiest Guy", system-ui; letter-spacing:1px; font-size:28px; color:#fff; margin:10px 0}
+.brand .accent{color:#ffea61}
+.pokeball{display:inline-block;width:22px;height:22px;border-radius:50%;background:
+  radial-gradient(circle at 50% 50%, #fff 0%, #fff 40%, #000 40%, #000 43%, #e3350d 43%, #e3350d 100%);
+  box-shadow:0 0 0 2px #0004}
+.site-nav a{color:#fff;text-decoration:none;font-weight:600;opacity:.9}
+.site-nav a[aria-current="page"]{text-decoration:underline}
+
+.site-footer{margin-top:32px;border-top:1px solid #2a3566;background:rgba(0,0,0,.25)}
+.site-footer p{color:var(--muted);font-size:14px}
+.site-footer a{color:#ffea61}
+
+.card{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid #27306a;border-radius:16px;box-shadow:var(--shadow);padding:20px}
+.game{max-width:720px;margin:20px auto}
+.game-title{font-family:"Luckiest Guy", system-ui; letter-spacing:.5px; margin:0 0 12px; font-size:24px; color:#ffea61}
+
+.sprite-frame{position:relative;width:min(90vw,360px);height:min(90vw,360px);border-radius:12px;overflow:hidden;margin:12px auto 16px;background:
+  linear-gradient(45deg,#1c2252 25%,#27306a 25% 50%,#1c2252 50% 75%,#27306a 75%);
+  background-size:32px 32px;border:2px solid #3b4cca}
+.sprite-crop{width:100%;height:100%;background-repeat:no-repeat;background-size:500% 500%;background-position:center;filter:contrast(1.05) saturate(1.05);transition:background-size .35s ease, background-position .35s ease}
+/* When revealed, we'll animate to show the full sprite via JS (sets background-size to contain) */
+.sprite-crop.revealed{ /* styles mainly toggled via inline JS; class is for enabling transitions */ }
+/* Disable transitions when this class is present (used during initial load to prevent any reveal) */
+.sprite-crop.no-anim{transition:none!important}
+.sprite-skeleton{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.12),rgba(255,255,255,.06));background-size:200% 100%;animation:shimmer 1.2s infinite;opacity:0;transition:opacity .25s ease}
+.sprite-frame.loading .sprite-skeleton{opacity:1}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.guess-form{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.input-wrap{position:relative;flex:1;min-width:220px}
+#guess-input{width:100%;padding:12px 36px 12px 40px;border-radius:12px;border:1px solid #34407f;background:#0c1330;color:var(--text);outline:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+#guess-input::placeholder{color:#9aa3e0}
+#guess-input:focus{border-color:#5b6df8;box-shadow:0 0 0 3px rgba(59,76,202,.35)}
+.input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#9aa3e0}
+
+/* Suggestions dropdown */
+.suggestions{position:absolute;left:0;right:0;top:calc(100% + 6px);background:#0c1330;border:1px solid #34407f;border-radius:12px;box-shadow:var(--shadow);max-height:260px;overflow:auto;padding:6px;display:none;z-index:5}
+.suggestions.visible{display:block}
+.suggestion-item{padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text)}
+.suggestion-item:hover,.suggestion-item[aria-selected="true"],.suggestion-item.active{background:#151d46}
+.suggestions .no-results{color:#9aa3e0;padding:8px 10px}
+
+.controls{display:flex;gap:10px;flex-wrap:wrap}
+.btn{padding:10px 14px;border-radius:12px;border:1px solid #2b386f;background:#151d46;color:#fff;cursor:pointer;font-weight:600;transition:transform .06s ease, filter .2s ease, background .2s}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(90deg,#ffcc01,#ffd942);color:#1b223e;border-color:#caa300}
+.btn-accent{background:linear-gradient(90deg,#3b4cca,#5b6df8)}
+
+.feedback{min-height:24px;margin:6px 0;font-weight:700}
+.correct{color:var(--ok)}
+.incorrect{color:var(--err)}
+
+.visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px, 1px, 1px, 1px);white-space:nowrap}
+
+@media (prefers-reduced-motion: reduce){
+  .btn{transition:none}
+  .sprite-skeleton{animation:none}
+}

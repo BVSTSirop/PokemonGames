@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pokémon Mini Games</title>
+  <meta name="theme-color" content="#ffcc01">
+  <meta name="description" content="Guess the Pokémon from a cropped sprite. Powered by PokeAPI.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Luckiest+Guy&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="pokeball" aria-hidden="true">⚪️</span>
+        <h1><span class="accent">Pokémon</span> Mini Games</h1>
+      </div>
+      <nav class="site-nav">
+        <a href="#" aria-current="page">Guess</a>
+        <!-- Future nav items -->
+      </nav>
+    </div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <p>Data from <a href="https://pokeapi.co/" target="_blank" rel="noopener">PokeAPI</a>. Not affiliated with Nintendo/Game Freak.</p>
+    </div>
+  </footer>
+  <script src="/static/game.js" defer></script>
+</body>
+</html>
