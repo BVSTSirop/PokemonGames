@@ -18,7 +18,9 @@ async function newRound() {
   // Force reflow to apply styles without transition, then allow transitions again
   void el.offsetWidth;
   el.classList.remove('no-anim');
-  document.getElementById('feedback').textContent = '';
+  const fbEl = document.getElementById('feedback');
+    fbEl.textContent = '';
+    fbEl.className = 'feedback';
   const input = document.getElementById('guess-input');
   input.value = '';
   hideSuggestions();
@@ -157,7 +159,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const fb = document.getElementById('feedback');
     if (res.correct) {
       fb.textContent = `Correct! It is ${res.name}`;
-      fb.className = 'feedback correct';
+      fb.className = 'feedback prominent correct';
       revealFullSprite();
     } else {
       fb.textContent = `Nope!`;
@@ -190,7 +192,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('reveal-btn').addEventListener('click', () => {
     const fb = document.getElementById('feedback');
     fb.textContent = `It was ${state.answer}`;
-    fb.className = 'feedback';
+    fb.className = 'feedback prominent reveal';
     revealFullSprite();
   });
 

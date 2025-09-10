@@ -59,9 +59,12 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .btn-primary{background:linear-gradient(90deg,#ffcc01,#ffd942);color:#1b223e;border-color:#caa300}
 .btn-accent{background:linear-gradient(90deg,#3b4cca,#5b6df8)}
 
-.feedback{min-height:24px;margin:6px 0;font-weight:700}
-.correct{color:var(--ok)}
-.incorrect{color:var(--err)}
+.feedback{min-height:24px;margin:10px 0;font-weight:800}
+.feedback.prominent{font-size:20px; line-height:1.3; padding:10px 12px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,.25)}
+/* Make feedback backgrounds solid and non-transparent for better contrast */
+.correct{background:#34c759; color:#0b1021; border:1px solid #1da548}
+.reveal{background:#ffea61; color:#1b223e; border:1px solid #caa300}
+.incorrect{background:#ff3b30; color:#0b1021; border:1px solid #cf2a22}
 
 .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px, 1px, 1px, 1px);white-space:nowrap}
 
