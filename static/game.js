@@ -162,9 +162,7 @@ window.addEventListener('DOMContentLoaded', () => {
       fb.className = 'feedback prominent correct';
       revealFullSprite();
     } else {
-      fb.textContent = `Nope!`;
-      fb.className = 'feedback incorrect';
-      // Zoom out more (reduce background-size by 15%) on each wrong guess
+      // No feedback message on wrong guess per requirement; keep zoom-out hint only
       const el = document.getElementById('sprite-crop');
       if (el) {
         // Ensure we are not in revealed state
