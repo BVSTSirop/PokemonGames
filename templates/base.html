@@ -19,9 +19,18 @@
         <h1><span class="accent">Pokémon</span> Mini Games</h1>
       </div>
       <nav class="site-nav">
-        <a href="#" aria-current="page">Guess</a>
+        <a href="#" aria-current="page" data-i18n="nav.guess">Guess</a>
         <!-- Future nav items -->
       </nav>
+      <div class="lang-switcher">
+        <label for="lang-select" class="visually-hidden" data-i18n="lang.label">Language</label>
+        <select id="lang-select" class="lang-select" aria-label="Language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+        </select>
+      </div>
     </div>
   </header>
   <main class="container">

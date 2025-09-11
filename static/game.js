@@ -1,9 +1,106 @@
 let state = { token: null, answer: null };
 
+// --- Simple client-side i18n ---
+const I18N = {
+  en: {
+    'nav.guess': 'Guess',
+    'lang.label': 'Language',
+    'game.title': 'Guess the Pokémon from a sprite part',
+    'form.label': 'Your guess',
+    'form.placeholder': 'Type a Pokémon name...',
+    'form.guessBtn': 'Guess',
+    'controls.reveal': 'Reveal',
+    'controls.next': 'Next',
+    'aria.spriteCrop': 'Cropped Pokémon sprite',
+    'aria.suggestions': 'Suggestions',
+    'feedback.correct': 'Correct! It is {name}',
+    'feedback.reveal': 'It was {name}'
+  },
+  es: {
+    'nav.guess': 'Adivinar',
+    'lang.label': 'Idioma',
+    'game.title': 'Adivina el Pokémon por una parte del sprite',
+    'form.label': 'Tu respuesta',
+    'form.placeholder': 'Escribe un nombre de Pokémon...',
+    'form.guessBtn': 'Adivinar',
+    'controls.reveal': 'Revelar',
+    'controls.next': 'Siguiente',
+    'aria.spriteCrop': 'Sprite de Pokémon recortado',
+    'aria.suggestions': 'Sugerencias',
+    'feedback.correct': '¡Correcto! Es {name}',
+    'feedback.reveal': 'Era {name}'
+  },
+  fr: {
+    'nav.guess': 'Deviner',
+    'lang.label': 'Langue',
+    'game.title': 'Devinez le Pokémon à partir d’une partie du sprite',
+    'form.label': 'Votre réponse',
+    'form.placeholder': 'Saisissez un nom de Pokémon…',
+    'form.guessBtn': 'Deviner',
+    'controls.reveal': 'Révéler',
+    'controls.next': 'Suivant',
+    'aria.spriteCrop': 'Sprite de Pokémon recadré',
+    'aria.suggestions': 'Suggestions',
+    'feedback.correct': 'Correct ! C’est {name}',
+    'feedback.reveal': 'C’était {name}'
+  },
+  de: {
+    'nav.guess': 'Raten',
+    'lang.label': 'Sprache',
+    'game.title': 'Errate das Pokémon anhand eines Sprite-Ausschnitts',
+    'form.label': 'Dein Tipp',
+    'form.placeholder': 'Gib einen Pokémon-Namen ein…',
+    'form.guessBtn': 'Raten',
+    'controls.reveal': 'Aufdecken',
+    'controls.next': 'Weiter',
+    'aria.spriteCrop': 'Zugeschnittener Pokémon-Sprite',
+    'aria.suggestions': 'Vorschläge',
+    'feedback.correct': 'Richtig! Es ist {name}',
+    'feedback.reveal': 'Es war {name}'
+  }
+};
+
+function getLang() {
+  const saved = localStorage.getItem('lang');
+  if (saved && I18N[saved]) return saved;
+  const nav = (navigator.language || 'en').toLowerCase();
+  const base = nav.split('-')[0];
+  return I18N[base] ? base : 'en';
+}
+function setLang(lang) {
+  const l = I18N[lang] ? lang : 'en';
+  localStorage.setItem('lang', l);
+  document.documentElement.setAttribute('lang', l);
+}
+function t(key, params = {}) {
+  const lang = getLang();
+  const bundle = I18N[lang] || I18N.en;
+  let s = bundle[key] || I18N.en[key] || key;
+  Object.entries(params).forEach(([k, v]) => {
+    s = s.replace(new RegExp('{' + k + '}', 'g'), v);
+  });
+  return s;
+}
+function translatePage() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const attr = el.getAttribute('data-i18n-attr');
+    const val = t(key);
+    if (attr) {
+      el.setAttribute(attr, val);
+    } else {
+      el.textContent = val;
+    }
+  });
+  // Sync selector UI value
+  const sel = document.getElementById('lang-select');
+  if (sel) sel.value = getLang();
+}
+
 async function newRound() {
   const frame = document.querySelector('.sprite-frame');
   frame?.classList.add('loading');
-  const res = await fetch('/api/random-sprite');
+  const res = await fetch(`/api/random-sprite?lang=${encodeURIComponent(getLang())}`);
   const data = await res.json();
   state.token = data.token;
   state.answer = data.name; // for Reveal button; not displayed by default
@@ -32,7 +129,7 @@ async function checkGuess(guess) {
   const res = await fetch('/api/check-guess', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: state.token, guess })
+    body: JSON.stringify({ token: state.token, guess, lang: getLang() })
   });
   return await res.json();
 }
@@ -75,24 +172,34 @@ function hideSuggestions() {
   document.getElementById('guess-input').setAttribute('aria-expanded', 'false');
 }
 
+let suggController = null;
 async function fetchSuggestions(query) {
   const box = document.getElementById('suggestions');
   if (!query) {
+    if (suggController) {
+      try { suggController.abort(); } catch (_) {}
+      suggController = null;
+    }
     hideSuggestions();
     return;
   }
   try {
-    const url = `/api/pokemon-suggest?q=${encodeURIComponent(query)}&limit=20`;
-    const res = await fetch(url);
+    const url = `/api/pokemon-suggest?q=${encodeURIComponent(query)}&limit=20&lang=${encodeURIComponent(getLang())}`;
+    if (suggController) {
+      try { suggController.abort(); } catch (_) {}
+    }
+    suggController = new AbortController();
+    const res = await fetch(url, { signal: suggController.signal });
     const names = await res.json();
     renderSuggestions(Array.isArray(names) ? names : []);
     document.getElementById('guess-input').setAttribute('aria-expanded', names && names.length ? 'true' : 'false');
   } catch (_) {
+    // Ignore abort errors; hide suggestions on other failures
     hideSuggestions();
   }
 }
 
-const debouncedSuggest = debounce((q) => fetchSuggestions(q), 150);
+const debouncedSuggest = debounce((q) => fetchSuggestions(q), 250);
 
 function revealFullSprite() {
   const el = document.getElementById('sprite-crop');
@@ -141,6 +248,19 @@ function handleKeyNav(e) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Set initial language and translate UI
+  setLang(getLang());
+  translatePage();
+  // Hook up language selector
+  const langSel = document.getElementById('lang-select');
+  if (langSel) {
+    langSel.value = getLang();
+    langSel.addEventListener('change', () => {
+      setLang(langSel.value);
+      translatePage();
+    });
+  }
+
   // No initial full list; suggestions are fetched as the user types
   newRound();
 
@@ -158,7 +278,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const res = await checkGuess(guess);
     const fb = document.getElementById('feedback');
     if (res.correct) {
-      fb.textContent = `Correct! It is ${res.name}`;
+      fb.textContent = t('feedback.correct', { name: res.name });
       fb.className = 'feedback prominent correct';
       revealFullSprite();
     } else {
@@ -189,7 +309,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('reveal-btn').addEventListener('click', () => {
     const fb = document.getElementById('feedback');
-    fb.textContent = `It was ${state.answer}`;
+    fb.textContent = t('feedback.reveal', { name: state.answer });
     fb.className = 'feedback prominent reveal';
     revealFullSprite();
   });
