@@ -154,14 +154,20 @@ def pokemon_names():
 @app.route('/api/pokemon-suggest')
 def pokemon_suggest():
     """Suggest names for the given query and language.
-    For non-English, we now *always* have a display string: either the localized
-    one (if cached) or the English name as a fallback. This guarantees suggestions
-    even when the localized name equals English or hasn't been fetched yet.
+
+    Improvements:
+    - Always shows a display string in non-English (localized if cached, else English fallback).
+    - Optionally prioritizes the *current round's Pokémon* via ?current_id=...
+    - Fetches missing localized names using a stride across the full id range
+      (not just the first N), so mid/high ids like 568 (Trubbish) get covered early.
     """
     try:
         q = (request.args.get('q') or '').strip()
         limit = int(request.args.get('limit', '20'))
         lang = (request.args.get('lang') or 'en').lower()
+        current_id_raw = request.args.get('current_id')
+        current_id = int(current_id_raw) if current_id_raw and current_id_raw.isdigit() else None
+
         if lang not in SUPPORTED_LANGS:
             lang = 'en'
         if limit <= 0:
@@ -189,8 +195,8 @@ def pokemon_suggest():
         results = []
         seen = set()
 
-        # Helper to consider a candidate name
         def consider(name_loc: str):
+            """Add a candidate if it matches, de-duped, honoring limit later."""
             nonlocal results
             if not name_loc:
                 return False
@@ -202,46 +208,80 @@ def pokemon_suggest():
                     return True
             return False
 
-        # First pass: use whatever we have *now* (localized if cached, else English)
-        # This guarantees suggestions show up immediately even if the localized
-        # string equals English or hasn't been fetched yet.
+        # 1) PRIORITIZE current round's Pokémon (if provided).
+        # This guarantees that Unratütox (id 568) shows up when the round is Trubbish.
+        if current_id:
+            try:
+                name_cur = get_localized_name(current_id, lang)  # caches fallback if necessary
+                consider(name_cur)
+                if len(results) >= limit:
+                    return jsonify(results[:limit])
+            except Exception:
+                pass  # non-fatal
+
+        # 2) FIRST PASS over everything with whatever we have *now* (cached lang name or English fallback)
+        #    This ensures we show something even when localized == English or not fetched yet.
         for p in lst:
             pid = p['id']
             cached_lang_name = SPECIES_NAMES.get(pid, {}).get(lang)
-            fallback = p['display_en']
-            display_now = cached_lang_name or fallback
+            display_now = cached_lang_name or p['display_en']
             if consider(display_now) and len(results) >= limit:
-                break
+                return jsonify(results[:limit])
 
-        if len(results) >= limit:
+        # 3) SECOND PASS: fetch some localized names in parallel to improve results.
+        #    Instead of taking only the first N missing ids, stride across the full list
+        #    to improve coverage for mid/high ids like 568.
+        missing_ids_all = [p['id'] for p in lst if lang not in SPECIES_NAMES.get(p['id'], {})]
+
+        if not missing_ids_all:
             return jsonify(results[:limit])
 
-        # Second pass: fetch some localized names in parallel to improve results.
-        # We cap work per request.
-        missing_ids = [p['id'] for p in lst if lang not in SPECIES_NAMES.get(p['id'], {})]
-        if not missing_ids:
-            return jsonify(results[:limit])
+        max_new_calls = min(48, max(12, limit * 3))  # slightly higher but still polite
+        ids_to_fetch = []
 
-        max_new_calls = min(24, max(8, limit * 2))
-        ids_to_fetch = missing_ids[:max_new_calls]
+        # Seed with current_id if missing
+        if current_id and current_id in missing_ids_all:
+            ids_to_fetch.append(current_id)
+
+        # Stride-sample across missing ids to cover the full range
+        if len(ids_to_fetch) < max_new_calls:
+            stride = max(1, len(missing_ids_all) // max_new_calls)
+            # Offset the stride by a small hash of the query to vary positions across different inputs
+            qhash = abs(hash(q_norm)) % stride if stride > 1 else 0
+            i = qhash
+            while i < len(missing_ids_all) and len(ids_to_fetch) < max_new_calls:
+                pid = missing_ids_all[i]
+                if pid != current_id:
+                    ids_to_fetch.append(pid)
+                i += stride
+
+            # If still short (e.g., very small list), fill from the remainder sequentially
+            if len(ids_to_fetch) < max_new_calls:
+                for pid in missing_ids_all:
+                    if pid == current_id or pid in ids_to_fetch:
+                        continue
+                    ids_to_fetch.append(pid)
+                    if len(ids_to_fetch) >= max_new_calls:
+                        break
 
         def fetch_and_store(pid):
             try:
-                # This call will also store a fallback (English) for the lang if needed.
-                name = get_localized_name(pid, lang)
+                name = get_localized_name(pid, lang)  # stores fallback if missing
                 return pid, name
             except Exception:
                 return pid, None
 
         futures = [EXECUTOR.submit(fetch_and_store, pid) for pid in ids_to_fetch]
         for f in as_completed(futures):
-            pid, name_loc = f.result()
+            _, name_loc = f.result()
             if consider(name_loc) and len(results) >= limit:
                 break
 
         return jsonify(results[:limit])
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/api/random-sprite')
