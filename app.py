@@ -4,6 +4,7 @@ from functools import lru_cache
 from urllib.parse import urlparse
 
 import requests
+from requests.exceptions import RequestException, Timeout, HTTPError
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -11,6 +12,16 @@ app.config["JSON_SORT_KEYS"] = False
 
 POKEAPI = "https://pokeapi.co/api/v2"
 SUPPORTED_LANGS = {"en", "es", "fr", "de"}
+
+import logging, traceback
+log = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+@app.errorhandler(Exception)
+def handle_any_error(e):
+    log.error("Unhandled error: %s\n%s", e, traceback.format_exc())
+    return jsonify({"error": str(e), "type": e.__class__.__name__}), 500
+
 
 # -----------------------
 # Normalization utilities
@@ -87,20 +98,26 @@ def get_localized_name(poke_id: int, lang: str) -> str:
 
 @lru_cache(maxsize=4096)
 def get_sprite_for_id(poke_id: int) -> str | None:
-    r = requests.get(f"{POKEAPI}/pokemon/{poke_id}", timeout=20)
-    r.raise_for_status()
+    try:
+        r = requests.get(f"{POKEAPI}/pokemon/{poke_id}", timeout=20)
+        r.raise_for_status()
+    except HTTPError as e:
+        if e.response is not None and e.response.status_code == 404:
+            return None
+        raise
+
     j = r.json()
     art = (
-        j["sprites"].get("other", {})
-        .get("official-artwork", {})
-        .get("front_default")
-    ) or j["sprites"].get("front_default")
+        j["sprites"].get("other", {}).get("official-artwork", {}).get("front_default")
+        or j["sprites"].get("front_default")
+    )
     if not art:
         other = j["sprites"].get("other", {})
         for v in other.values():
             if isinstance(v, dict) and v.get("front_default"):
                 return v["front_default"]
     return art
+
 
 # -----------------------
 # Routes
@@ -150,60 +167,46 @@ def round_data():
     lang = (request.args.get("lang") or "en").lower()
     if lang not in SUPPORTED_LANGS: lang = "en"
 
-    try:
-        items = get_pokemon_list()  # cached after first success
-    except RequestException as e:
-        return jsonify({"error": f"list_fetch_failed: {e.__class__.__name__}"}), 502
-
+    items = get_pokemon_list()
     if not items:
         return jsonify({"error": "no_items"}), 503
 
-    max_id = items[-1]["id"]
     attempts = 12
     last_err = None
 
     for _ in range(attempts):
+        p = random.choice(items)         # <— pick from list, not randint()
+        pid = p["id"]
         try:
-            pid = random.randint(1, max_id)
-            sprite = get_sprite_for_id(pid)  # cached per id
+            sprite = get_sprite_for_id(pid)
             if not sprite:
                 continue
-
+            # names
             display_local = get_localized_name(pid, lang)
-            display_en = next((p["display_en"] for p in items if p["id"] == pid), None)
-            slug = next((p["slug"] for p in items if p["id"] == pid), None)
-            accepts = list({normalize_name(x) for x in (display_local, display_en, slug)})
+            display_en = p["display_en"]
+            slug = p["slug"]
 
-            bg_size = "500% 500%"
+            accepts = list({normalize_name(x) for x in (display_local, display_en, slug)})
             x, y = random.randint(0, 100), random.randint(0, 100)
-            bg_pos = f"{x}% {y}%"
-            token = secrets.token_urlsafe(12)
 
             return jsonify({
-                "token": token,
+                "token": secrets.token_urlsafe(12),
                 "id": pid,
                 "slug": slug,
                 "display_en": display_en,
                 "display_local": display_local,
                 "accepts": accepts,
                 "sprite": sprite,
-                "bg_size": bg_size,
-                "bg_pos": bg_pos,
+                "bg_size": "500% 500%",
+                "bg_pos": f"{x}% {y}%",
             })
-        except (RequestException, Timeout) as e:
-            last_err = e
-            # brief jittered backoff to be nice to PokeAPI
-            time.sleep(0.08 + random.random() * 0.12)
-            continue
-        except Exception as e:
-            # Any other unexpected error: record and keep trying a new id
-            last_err = e
-            continue
+    except (RequestException, Timeout) as e:
+        last_err = e
+        time.sleep(0.08 + random.random() * 0.12)  # gentle backoff
+        continue
 
-    # If we got here, we failed all attempts
-    msg = f"round_build_failed: {last_err.__class__.__name__ if last_err else 'unknown'}"
-    return jsonify({"error": msg}), 502
-    
+return jsonify({"error": f"round_build_failed: {type(last_err).__name__ if last_err else 'unknown'}"}), 502
+
 @app.post("/api/verify")  # optional: analytics / anti-cheat
 def verify():
     data = request.get_json(silent=True) or {}
