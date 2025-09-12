@@ -1,24 +1,6 @@
 let state = { token: null, answer: null, ready: false, accept: null };
 let roundSeq = 0; // guards out-of-order responses
 
-// Top-level (near your state):
-let ALL_NAMES = []; // [{ id, slug, display_en, name_de?, name_fr?, name_es? }]
-
-// Map ui lang -> field to read from ALL_NAMES
-function nameFieldFor(lang) {
-  return lang === 'en' ? 'display_en' : `name_${lang}`;
-}
-
-// Fetch all names for current UI language
-async function bootstrapAllNames() {
-  const lang = getLang();
-  const res = await fetch(`/api/all-names?lang=${encodeURIComponent(lang)}`);
-  const data = await res.json();
-  // Defensive: ensure array and strings
-  ALL_NAMES = Array.isArray(data) ? data : [];
-}
-
-
 // --- Simple client-side i18n ---
 const I18N = {
   en: {
@@ -222,50 +204,30 @@ function hideSuggestions() {
 }
 
 let suggController = null;
-// REPLACE your fetchSuggestions() with this local version
 async function fetchSuggestions(query) {
   const box = document.getElementById('suggestions');
   if (!query) {
+    if (suggController) {
+      try { suggController.abort(); } catch (_) {}
+      suggController = null;
+    }
     hideSuggestions();
     return;
   }
-
-  const field = nameFieldFor(getLang()); // e.g., 'name_de' or 'display_en'
-  const qn = normalizeName(query);
-  if (!ALL_NAMES.length) {
-    // If somehow not bootstrapped yet, try again soon
+  try {
+    const url = `/api/pokemon-suggest?q=${encodeURIComponent(query)}&limit=20&lang=${encodeURIComponent(getLang())}`;
+    if (suggController) {
+      try { suggController.abort(); } catch (_) {}
+    }
+    suggController = new AbortController();
+    const res = await fetch(url, { signal: suggController.signal });
+    const names = await res.json();
+    renderSuggestions(Array.isArray(names) ? names : []);
+    document.getElementById('guess-input').setAttribute('aria-expanded', names && names.length ? 'true' : 'false');
+  } catch (_) {
     hideSuggestions();
-    return;
   }
-
-  // Prioritize startsWith, then contains (deduped), limit 20
-  const starts = [];
-  const contains = [];
-  for (const p of ALL_NAMES) {
-    const val = p[field] || p.display_en || '';
-    if (!val) continue;
-    const nv = normalizeName(val);
-    if (!nv) continue;
-    if (nv.startsWith(qn)) {
-      starts.push(val);
-    } else if (nv.includes(qn)) {
-      contains.push(val);
-    }
-    if (starts.length >= 20) break;
-  }
-  let list = starts;
-  if (list.length < 20) {
-    for (const v of contains) {
-      if (!list.includes(v)) list.push(v);
-      if (list.length >= 20) break;
-    }
-  }
-
-  renderSuggestions(list);
-  document.getElementById('guess-input')
-    .setAttribute('aria-expanded', list.length ? 'true' : 'false');
 }
-
 
 const debouncedSuggest = debounce((q) => fetchSuggestions(q), 250);
 
@@ -317,19 +279,15 @@ function handleKeyNav(e) {
 window.addEventListener('DOMContentLoaded', () => {
   setLang(getLang());
   translatePage();
-
   const langSel = document.getElementById('lang-select');
   if (langSel) {
     langSel.value = getLang();
-    langSel.addEventListener('change', async () => {
+    langSel.addEventListener('change', () => {
       setLang(langSel.value);
       translatePage();
-      await bootstrapAllNames(); // reload for new language
-      hideSuggestions();
     });
   }
 
-  await bootstrapAllNames();   // <– legal now
   newRound();
 
   const inputEl = document.getElementById('guess-input');
