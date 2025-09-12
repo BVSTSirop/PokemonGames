@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 
+WARM_CACHE_ON_START = True  # toggle if you want to disable on some envs
+
 # In-memory caches
 POKEMON_NAMES = []  # English display names list (title-cased)
 POKEMON_LIST = []   # List of dicts: { 'id': int, 'slug': str, 'display_en': str }
@@ -23,6 +25,92 @@ SUPPORTED_LANGS = {'en', 'es', 'fr', 'de'}
 
 # Thread pool for parallel species fetches (bounded to be polite to PokeAPI)
 EXECUTOR = ThreadPoolExecutor(max_workers=8)
+
+def _warm_species_names_for_all_pokemon(preferred_lang: str = 'de'):
+    """
+    Fetch /pokemon-species/<id> once per Pokémon to populate SPECIES_NAMES
+    for all SUPPORTED_LANGS. We call with a non-EN lang to force the species
+    request (the 'en' fast-path wouldn't fetch from PokeAPI).
+    """
+    lst = get_pokemon_list()
+
+    def warm_one(pid: int):
+        try:
+            # Any non-EN language will do; our function stores all supported langs
+            get_localized_name(pid, preferred_lang)
+        except Exception:
+            pass
+
+    futures = [EXECUTOR.submit(warm_one, p['id']) for p in lst]
+    for _ in as_completed(futures):
+        pass
+
+
+@app.before_first_request
+def _warm_on_first_request():
+    if not WARM_CACHE_ON_START:
+        return
+    # Ensure list is ready and English fallback seeded
+    get_pokemon_list()
+    # One species request per Pokémon; caches all supported languages
+    _warm_species_names_for_all_pokemon(preferred_lang='de')
+
+@app.route('/api/all-names')
+def all_names():
+    """
+    Bootstrap endpoint for the client to download all names once.
+    - If ?langs=de,fr is provided, we include those languages.
+    - Otherwise ?lang=de (single) or default 'en'.
+    Returns a compact list of dicts per Pokémon.
+    """
+    try:
+        lst = get_pokemon_list()  # ensures English list & seeds fallback
+        # Parse query
+        langs_param = request.args.get('langs')
+        if langs_param:
+            langs = [x.strip().lower() for x in langs_param.split(',') if x.strip()]
+        else:
+            lang = (request.args.get('lang') or 'en').lower()
+            langs = [lang]
+        # sanitize
+        langs = [l if l in SUPPORTED_LANGS else 'en' for l in langs]
+
+        # Make sure requested languages exist in cache; if not (e.g. warm-up disabled),
+        # fetch minimally now in a polite parallel sweep.
+        missing_langs = [l for l in langs if any(l not in SPECIES_NAMES.get(p['id'], {}) for p in lst)]
+        if missing_langs:
+            def warm_lang_for_all(lang_to_warm):
+                def warm_one(pid):
+                    try:
+                        # One call per Pokémon populates all langs, but we call with requested lang
+                        get_localized_name(pid, lang_to_warm)
+                    except Exception:
+                        pass
+                futures = [EXECUTOR.submit(warm_one, p['id']) for p in lst]
+                for _ in as_completed(futures):
+                    pass
+            for l in missing_langs:
+                warm_lang_for_all(l)
+
+        # Build payload
+        out = []
+        for p in lst:
+            pid = p['id']
+            entry = {
+                'id': pid,
+                'slug': p['slug'],
+                'display_en': p['display_en'],
+            }
+            for l in langs:
+                # guaranteed now thanks to warm-up; still fallback-safe
+                name_loc = SPECIES_NAMES.get(pid, {}).get(l) or p['display_en']
+                entry[f'name_{l}'] = name_loc
+            out.append(entry)
+
+        return jsonify(out)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 def get_pokemon_list():
