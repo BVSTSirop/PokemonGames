@@ -103,7 +103,6 @@ def get_sprite_for_pokemon(poke_id):
     r = requests.get(url, timeout=20)
     r.raise_for_status()
     j = r.json()
-    # Official artwork preferred
     art = (
         j['sprites'].get('other', {})
         .get('official-artwork', {})
@@ -112,7 +111,6 @@ def get_sprite_for_pokemon(poke_id):
     if not art:
         art = j['sprites'].get('front_default')
     if not art:
-        # As a last resort, use any other available sprite URL within nested fields
         other = j['sprites'].get('other', {})
         for k in other.values():
             if isinstance(k, dict) and k.get('front_default'):
@@ -147,10 +145,8 @@ def pokemon_suggest():
             limit = 20
         lst = get_pokemon_list()
         if not q:
-            # Do not return the whole list when empty input; return empty suggestions
             return jsonify([])
 
-        # English: match against English display names as before
         if lang == 'en':
             names_en = [p['display_en'] for p in lst]
             q_low = q.lower()
@@ -162,14 +158,11 @@ def pokemon_suggest():
                 selected = starts[:limit]
             return jsonify(selected)
 
-        # Non-English: language-aware matching using localized species names.
-        # Fast path: search cached localized names first, then fetch missing in parallel if needed.
         q_norm = normalize_name(q)
         results = []
         seen = set()
 
-        # Gather cached localized names
-        cached_entries = []  # list of (id, name)
+        cached_entries = []
         missing_ids = []
         for p in lst:
             pid = p['id']
@@ -179,7 +172,6 @@ def pokemon_suggest():
             else:
                 missing_ids.append(pid)
 
-        # Helper to add a name if it matches the query
         def consider(name_loc: str):
             nonlocal results
             if not name_loc:
@@ -192,7 +184,6 @@ def pokemon_suggest():
                     return True
             return False
 
-        # First pass on cached, prioritize startswith then contains implicitly via consider
         for _, name_loc in cached_entries:
             if len(results) >= limit:
                 break
@@ -201,7 +192,6 @@ def pokemon_suggest():
         if len(results) >= limit or not missing_ids:
             return jsonify(results[:limit])
 
-        # Fetch missing in parallel but with a cap per request
         max_new_calls = min(24, max(8, limit * 2))
         ids_to_fetch = missing_ids[:max_new_calls]
 
@@ -215,7 +205,6 @@ def pokemon_suggest():
         futures = [EXECUTOR.submit(fetch_and_store, pid) for pid in ids_to_fetch]
         for f in as_completed(futures):
             pid, name_loc = f.result()
-            # get_localized_name has stored the name in SPECIES_NAMES cache; use returned value
             if consider(name_loc) and len(results) >= limit:
                 break
 
@@ -226,34 +215,30 @@ def pokemon_suggest():
 
 @app.route('/api/random-sprite')
 def random_sprite():
-    # Choose random ID in the supported range by PokeAPI; as of now > 1000
     try:
-        # Determine requested language for display name
         lang = (request.args.get('lang') or 'en').lower()
         if lang not in SUPPORTED_LANGS:
             lang = 'en'
-        names = fetch_all_pokemon_names()
-        max_id = 1025  # rough upper bound; not all ids exist but many do
-        # Try up to a few times to find a Pokémon with a valid sprite
+        fetch_all_pokemon_names()
+        max_id = 1025
         for _ in range(10):
             pid = random.randint(1, max_id)
-            sprite, name = get_sprite_for_pokemon(pid)
+            sprite, slug = get_sprite_for_pokemon(pid)
             if sprite:
                 token = secrets.token_urlsafe(16)
-                TOKENS[token] = { 'name': name, 'id': pid }
-                # Generate random background positioning to emulate a crop
-                # Increase zoom so we reveal less of the sprite (harder)
-                # We'll set background-size to 500% so an even smaller snippet is shown initially
+                TOKENS[token] = { 'name': slug, 'id': pid }
                 bg_size = '500% 500%'
-                # random position in %
                 x = random.randint(0, 100)
                 y = random.randint(0, 100)
                 bg_pos = f"{x}% {y}%"
-                # Localized display name for reveal/feedback
                 display_name = get_localized_name(pid, lang)
+                display_en = next((p['display_en'] for p in get_pokemon_list() if p['id'] == pid), None)
                 return jsonify({
                     'token': token,
-                    'name': display_name,  # localized for reveal
+                    'id': pid,
+                    'slug': slug,
+                    'display_en': display_en,
+                    'name': display_name,
                     'sprite': sprite,
                     'bg_size': bg_size,
                     'bg_pos': bg_pos,
@@ -264,15 +249,16 @@ def random_sprite():
 
 
 def normalize_name(s: str) -> str:
-    # Normalize by removing diacritics, spaces, hyphens, apostrophes, and dots; lowercase everything
     if not isinstance(s, str):
         s = str(s)
     s = s.strip()
     s = unicodedata.normalize('NFKD', s)
     s = ''.join(c for c in s if not unicodedata.combining(c))
-    s = s.lower()
+    s = s.casefold()
     for ch in [' ', '-', "'", '’', '´', '`', '.']:
         s = s.replace(ch, '')
+    s = s.replace('♀', 'f').replace('♂', 'm')
+    s = s.replace('\u200b', '').replace('\u200c', '').replace('\u200d', '').replace('\ufeff', '')
     return s
 
 
@@ -288,16 +274,13 @@ def check_guess():
         return jsonify({"error": "Invalid token"}), 400
     answer = TOKENS.get(token)
     guess_norm = normalize_name(guess)
-    # English slug from PokeAPI
     slug_norm = normalize_name(answer['name'])
-    # English display title (fallback)
     display_en = None
     for p in get_pokemon_list():
         if p['id'] == answer['id']:
             display_en = p['display_en']
             break
     display_en_norm = normalize_name(display_en) if display_en else ''
-    # Localized display for selected language
     localized = get_localized_name(answer['id'], lang)
     localized_norm = normalize_name(localized)
     is_correct = guess_norm in {slug_norm, display_en_norm, localized_norm}
@@ -310,3 +293,4 @@ def check_guess():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+```
