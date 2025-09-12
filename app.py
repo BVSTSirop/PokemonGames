@@ -163,6 +163,8 @@ def suggest():
             out.append(n); seen.add(n)
     return jsonify(out[:limit])
 
+import time  # <-- ensure this is present at top with other imports
+
 @app.get("/api/round")
 def round_data():
     lang = (request.args.get("lang") or "en").lower()
@@ -177,12 +179,12 @@ def round_data():
     last_err = None
 
     for _ in range(attempts):
-        p = random.choice(items)  # pick from known list (no invalid IDs)
+        p = random.choice(items)  # choose from known list to avoid invalid IDs
         pid = p["id"]
         try:
             sprite = get_sprite_for_id(pid)
             if not sprite:
-                # no sprite for this id; try another
+                # no sprite; try another
                 continue
 
             display_local = get_localized_name(pid, lang)
@@ -205,19 +207,21 @@ def round_data():
             })
 
         except (RequestException, Timeout) as e:
-            # network / rate-limit / timeout — back off and try another id
+            # Network / rate-limit / timeout — back off and try again
             last_err = e
             time.sleep(0.08 + random.random() * 0.12)
             continue
+
         except Exception as e:
-            # any other unexpected error — try another id
+            # Any other unexpected error — try another id
             last_err = e
             continue
 
-    # exhausted attempts
+    # If we get here, all attempts failed
     return jsonify({
         "error": f"round_build_failed: {type(last_err).__name__ if last_err else 'unknown'}"
     }), 502
+
 
 
 return jsonify({"error": f"round_build_failed: {type(last_err).__name__ if last_err else 'unknown'}"}), 502
