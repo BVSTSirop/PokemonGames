@@ -139,10 +139,14 @@ def pokemon_suggest():
         q = (request.args.get('q') or '').strip()
         limit = int(request.args.get('limit', '20'))
         lang = (request.args.get('lang') or 'en').lower()
+        current_id_raw = request.args.get('current_id')
+        current_id = int(current_id_raw) if current_id_raw and current_id_raw.isdigit() else None
+
         if lang not in SUPPORTED_LANGS:
             lang = 'en'
         if limit <= 0:
             limit = 20
+
         lst = get_pokemon_list()
         if not q:
             return jsonify([])
@@ -159,21 +163,9 @@ def pokemon_suggest():
             return jsonify(selected)
 
         q_norm = normalize_name(q)
-        results = []
-        seen = set()
-
-        cached_entries = []
-        missing_ids = []
-        for p in lst:
-            pid = p['id']
-            name_loc = SPECIES_NAMES.get(pid, {}).get(lang)
-            if name_loc:
-                cached_entries.append((pid, name_loc))
-            else:
-                missing_ids.append(pid)
+        results, seen = [], set()
 
         def consider(name_loc: str):
-            nonlocal results
             if not name_loc:
                 return False
             nn = normalize_name(name_loc)
@@ -184,31 +176,67 @@ def pokemon_suggest():
                     return True
             return False
 
-        for _, name_loc in cached_entries:
-            if len(results) >= limit:
-                break
-            consider(name_loc)
+        # 1) Prioritize current Pokémon (helps Trubbish -> Unratütox)
+        if current_id:
+            try:
+                name_cur = get_localized_name(current_id, lang)
+                consider(name_cur)
+                if len(results) >= limit:
+                    return jsonify(results[:limit])
+            except Exception:
+                pass
 
-        if len(results) >= limit or not missing_ids:
+        # 2) First pass: use cached lang or fallback en/display_en NOW
+        for p in lst:
+            pid = p['id']
+            name_now = (
+                SPECIES_NAMES.get(pid, {}).get(lang)
+                or SPECIES_NAMES.get(pid, {}).get('en')
+                or p['display_en']
+            )
+            if consider(name_now) and len(results) >= limit:
+                return jsonify(results[:limit])
+
+        # 3) Fetch missing localized names with a stride across ids
+        missing_ids_all = [p['id'] for p in lst if lang not in SPECIES_NAMES.get(p['id'], {})]
+        if not missing_ids_all:
             return jsonify(results[:limit])
 
-        max_new_calls = min(24, max(8, limit * 2))
-        ids_to_fetch = missing_ids[:max_new_calls]
+        max_new_calls = min(48, max(12, limit * 3))
+        ids_to_fetch = []
+        if current_id and current_id in missing_ids_all:
+            ids_to_fetch.append(current_id)
+
+        stride = max(1, len(missing_ids_all) // max_new_calls)
+        qhash = abs(hash(q_norm)) % stride if stride > 1 else 0
+        i = qhash
+        while i < len(missing_ids_all) and len(ids_to_fetch) < max_new_calls:
+            pid = missing_ids_all[i]
+            if pid != current_id:
+                ids_to_fetch.append(pid)
+            i += stride
+        if len(ids_to_fetch) < max_new_calls:
+            for pid in missing_ids_all:
+                if pid == current_id or pid in ids_to_fetch:
+                    continue
+                ids_to_fetch.append(pid)
+                if len(ids_to_fetch) >= max_new_calls:
+                    break
 
         def fetch_and_store(pid):
             try:
-                name = get_localized_name(pid, lang)
-                return pid, name
+                return pid, get_localized_name(pid, lang)
             except Exception:
                 return pid, None
 
         futures = [EXECUTOR.submit(fetch_and_store, pid) for pid in ids_to_fetch]
         for f in as_completed(futures):
-            pid, name_loc = f.result()
+            _, name_loc = f.result()
             if consider(name_loc) and len(results) >= limit:
                 break
 
         return jsonify(results[:limit])
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
