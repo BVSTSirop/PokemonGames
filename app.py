@@ -147,49 +147,63 @@ def suggest():
 
 @app.get("/api/round")
 def round_data():
-    """Return everything necessary for a fully client-side guess check."""
     lang = (request.args.get("lang") or "en").lower()
     if lang not in SUPPORTED_LANGS: lang = "en"
 
-    items = get_pokemon_list()
-    max_id = items[-1]["id"] if items else 1025
+    try:
+        items = get_pokemon_list()  # cached after first success
+    except RequestException as e:
+        return jsonify({"error": f"list_fetch_failed: {e.__class__.__name__}"}), 502
 
-    # Try several times to get a sprite
-    for _ in range(12):
-        pid = random.randint(1, max_id)
-        sprite = get_sprite_for_id(pid)
-        if not sprite:
+    if not items:
+        return jsonify({"error": "no_items"}), 503
+
+    max_id = items[-1]["id"]
+    attempts = 12
+    last_err = None
+
+    for _ in range(attempts):
+        try:
+            pid = random.randint(1, max_id)
+            sprite = get_sprite_for_id(pid)  # cached per id
+            if not sprite:
+                continue
+
+            display_local = get_localized_name(pid, lang)
+            display_en = next((p["display_en"] for p in items if p["id"] == pid), None)
+            slug = next((p["slug"] for p in items if p["id"] == pid), None)
+            accepts = list({normalize_name(x) for x in (display_local, display_en, slug)})
+
+            bg_size = "500% 500%"
+            x, y = random.randint(0, 100), random.randint(0, 100)
+            bg_pos = f"{x}% {y}%"
+            token = secrets.token_urlsafe(12)
+
+            return jsonify({
+                "token": token,
+                "id": pid,
+                "slug": slug,
+                "display_en": display_en,
+                "display_local": display_local,
+                "accepts": accepts,
+                "sprite": sprite,
+                "bg_size": bg_size,
+                "bg_pos": bg_pos,
+            })
+        except (RequestException, Timeout) as e:
+            last_err = e
+            # brief jittered backoff to be nice to PokeAPI
+            time.sleep(0.08 + random.random() * 0.12)
+            continue
+        except Exception as e:
+            # Any other unexpected error: record and keep trying a new id
+            last_err = e
             continue
 
-        # names
-        display_local = get_localized_name(pid, lang)
-        display_en = next((p["display_en"] for p in items if p["id"] == pid), None)
-        slug = next((p["slug"] for p in items if p["id"] == pid), None)
-
-        # accept set (normalized)
-        accepts = list({normalize_name(x) for x in (display_local, display_en, slug)})
-
-        # random crop (CSS background trick)
-        bg_size = "500% 500%"
-        x, y = random.randint(0, 100), random.randint(0, 100)
-        bg_pos = f"{x}% {y}%"
-
-        # token is optional now (useful if you still call /api/verify)
-        token = secrets.token_urlsafe(12)
-
-        return jsonify({
-            "token": token,
-            "id": pid,
-            "slug": slug,
-            "display_en": display_en,
-            "display_local": display_local,
-            "accepts": accepts,          # client can check instantly
-            "sprite": sprite,
-            "bg_size": bg_size,
-            "bg_pos": bg_pos,
-        })
-    return jsonify({"error": "Could not find sprite"}), 503
-
+    # If we got here, we failed all attempts
+    msg = f"round_build_failed: {last_err.__class__.__name__ if last_err else 'unknown'}"
+    return jsonify({"error": msg}), 502
+    
 @app.post("/api/verify")  # optional: analytics / anti-cheat
 def verify():
     data = request.get_json(silent=True) or {}

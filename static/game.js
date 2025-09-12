@@ -129,39 +129,49 @@ async function newRound() {
 
   const frame = document.querySelector(".sprite-frame");
   frame?.classList.add("loading");
-
-  const res = await fetch(`/api/round?lang=${encodeURIComponent(getLang())}`);
-  const data = await res.json();
-
-  if (seq !== state.seq) return; // drop stale
-
-  state.token = data.token;
-  state.answerLocal = data.display_local;
-  state.displayEN = data.display_en;
-  state.slug = data.slug;
-  state.accepts = buildAcceptSet(data);
-
-  const el = document.getElementById("sprite-crop");
-  el.classList.remove("revealed", "no-anim");
-  el.classList.add("no-anim");
-  el.style.backgroundImage = `url(${data.sprite})`;
-  el.style.backgroundSize = data.bg_size;
-  el.style.backgroundPosition = data.bg_pos;
-  void el.offsetWidth; // reflow
-  el.classList.remove("no-anim");
-
   const fb = document.getElementById("feedback");
   fb.textContent = "";
   fb.className = "feedback";
 
-  const input = document.getElementById("guess-input");
-  input.value = "";
-  hideSuggestions();
+  try {
+    const res = await fetch(`/api/round?lang=${encodeURIComponent(getLang())}`, { cache: "no-store" });
+    if (!res.ok) {
+      // Read text safely for diagnostics; don't attempt JSON
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Round fetch failed (${res.status}). ${txt.slice(0, 140)}`);
+    }
+    const data = await res.json();
 
-  setTimeout(() => frame?.classList.remove("loading"), 150);
+    if (seq !== state.seq) return; // drop stale
 
-  state.phase = "READY";
-  document.getElementById("guess-btn").disabled = false;
+    state.token = data.token;
+    state.answerLocal = data.display_local;
+    state.displayEN = data.display_en;
+    state.slug = data.slug;
+    state.accepts = buildAcceptSet(data);
+
+    const el = document.getElementById("sprite-crop");
+    el.classList.remove("revealed", "no-anim");
+    el.classList.add("no-anim");
+    el.style.backgroundImage = `url(${data.sprite})`;
+    el.style.backgroundSize = data.bg_size;
+    el.style.backgroundPosition = data.bg_pos;
+    void el.offsetWidth;
+    el.classList.remove("no-anim");
+
+    setTimeout(() => frame?.classList.remove("loading"), 150);
+    state.phase = "READY";
+    document.getElementById("guess-btn").disabled = false;
+  } catch (err) {
+    console.error(err);
+    frame?.classList.remove("loading");
+    fb.textContent = "Couldn’t load a new round. Please try again.";
+    fb.className = "feedback prominent";
+    state.phase = "LOADING";
+    document.getElementById("guess-btn").disabled = true;
+    // Optional: backoff retry
+    // setTimeout(() => newRound(), 1200);
+  }
 }
 
 function revealFullSprite() {
