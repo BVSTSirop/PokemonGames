@@ -1,5 +1,6 @@
 # server.py
 import os, random, secrets, unicodedata
+import time
 from functools import lru_cache
 from urllib.parse import urlparse
 
@@ -165,7 +166,8 @@ def suggest():
 @app.get("/api/round")
 def round_data():
     lang = (request.args.get("lang") or "en").lower()
-    if lang not in SUPPORTED_LANGS: lang = "en"
+    if lang not in SUPPORTED_LANGS:
+        lang = "en"
 
     items = get_pokemon_list()
     if not items:
@@ -175,13 +177,14 @@ def round_data():
     last_err = None
 
     for _ in range(attempts):
-        p = random.choice(items)         # <— pick from list, not randint()
+        p = random.choice(items)  # pick from known list (no invalid IDs)
         pid = p["id"]
         try:
             sprite = get_sprite_for_id(pid)
             if not sprite:
+                # no sprite for this id; try another
                 continue
-            # names
+
             display_local = get_localized_name(pid, lang)
             display_en = p["display_en"]
             slug = p["slug"]
@@ -200,10 +203,22 @@ def round_data():
                 "bg_size": "500% 500%",
                 "bg_pos": f"{x}% {y}%",
             })
-    except (RequestException, Timeout) as e:
-        last_err = e
-        time.sleep(0.08 + random.random() * 0.12)  # gentle backoff
-        continue
+
+        except (RequestException, Timeout) as e:
+            # network / rate-limit / timeout — back off and try another id
+            last_err = e
+            time.sleep(0.08 + random.random() * 0.12)
+            continue
+        except Exception as e:
+            # any other unexpected error — try another id
+            last_err = e
+            continue
+
+    # exhausted attempts
+    return jsonify({
+        "error": f"round_build_failed: {type(last_err).__name__ if last_err else 'unknown'}"
+    }), 502
+
 
 return jsonify({"error": f"round_build_failed: {type(last_err).__name__ if last_err else 'unknown'}"}), 502
 
