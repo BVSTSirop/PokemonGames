@@ -223,9 +223,6 @@ def round_data():
     }), 502
 
 
-
-return jsonify({"error": f"round_build_failed: {type(last_err).__name__ if last_err else 'unknown'}"}), 502
-
 @app.post("/api/verify")  # optional: analytics / anti-cheat
 def verify():
     data = request.get_json(silent=True) or {}
