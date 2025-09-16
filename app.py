@@ -266,33 +266,76 @@ def pokemon_suggest():
             # Do not return the whole list when empty input; return empty suggestions
             return jsonify([])
 
-        # Build the names list for the requested language from cache; fallback to English display where missing
+        # English: match against English display names as before
         if lang == 'en':
-            names = [p['display_en'] for p in lst]
-            q_norm = q.lower()
-            starts = [n for n in names if n.lower().startswith(q_norm)]
-            contains = [n for n in names if q_norm in n.lower() and n not in starts]
-            return jsonify((starts + contains)[:limit])
-        else:
-            names = []
-            for p in lst:
-                pid = p['id']
-                nm = SPECIES_NAMES.get(pid, {}).get(lang) or p['display_en']
-                names.append(nm)
-            # Deduplicate while preserving order
-            seen = set()
-            uniq = []
-            for n in names:
-                if n not in seen:
-                    uniq.append(n)
-                    seen.add(n)
-            # Normalize and filter
-            q_norm = normalize_name(q)
-            def norm(s: str):
-                return normalize_name(s)
-            starts = [n for n in uniq if norm(n).startswith(q_norm)]
-            contains = [n for n in uniq if q_norm in norm(n) and n not in starts]
-            return jsonify((starts + contains)[:limit])
+            names_en = [p['display_en'] for p in lst]
+            q_low = q.lower()
+            starts = [n for n in names_en if n.lower().startswith(q_low)]
+            if len(starts) < limit:
+                contains = [n for n in names_en if q_low in n.lower() and n not in starts]
+                selected = (starts + contains)[:limit]
+            else:
+                selected = starts[:limit]
+            return jsonify(selected)
+
+        # Non-English: language-aware matching using localized species names.
+        # Fast path: search cached localized names first, then fetch missing in parallel if needed.
+        q_norm = normalize_name(q)
+        results = []
+        seen = set()
+
+        # Gather cached localized names
+        cached_entries = []  # list of (id, name)
+        missing_ids = []
+        for p in lst:
+            pid = p['id']
+            name_loc = SPECIES_NAMES.get(pid, {}).get(lang)
+            if name_loc:
+                cached_entries.append((pid, name_loc))
+            else:
+                missing_ids.append(pid)
+
+        # Helper to add a name if it matches the query
+        def consider(name_loc: str):
+            nonlocal results
+            if not name_loc:
+                return False
+            nn = normalize_name(name_loc)
+            if nn.startswith(q_norm) or (q_norm in nn and len(results) < limit):
+                if name_loc not in seen:
+                    results.append(name_loc)
+                    seen.add(name_loc)
+                    return True
+            return False
+
+        # First pass on cached, prioritize startswith then contains implicitly via consider
+        for _, name_loc in cached_entries:
+            if len(results) >= limit:
+                break
+            consider(name_loc)
+
+        if len(results) >= limit or not missing_ids:
+            return jsonify(results[:limit])
+
+        # Fetch missing in parallel but with a cap per request
+        max_new_calls = min(24, max(8, limit * 2))
+        ids_to_fetch = missing_ids[:max_new_calls]
+
+        def fetch_and_store(pid):
+            try:
+                name = get_localized_name(pid, lang)
+                return pid, name
+            except Exception:
+                return pid, None
+
+        futures = [EXECUTOR.submit(fetch_and_store, pid) for pid in ids_to_fetch]
+        for f in as_completed(futures):
+            pid, name_loc = f.result()
+            # get_localized_name has stored the name in SPECIES_NAMES cache; use returned value
+            if consider(name_loc) and len(results) >= limit:
+                break
+
+        return jsonify(results[:limit])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
