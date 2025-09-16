@@ -16,9 +16,16 @@ function getLang() {
   const saved = localStorage.getItem('lang');
   return saved || 'en';
 }
+function setLang(lang){
+  const supported = ['en','es','fr','de'];
+  const l = supported.includes(lang) ? lang : 'en';
+  try { localStorage.setItem('lang', l); } catch(_){ }
+  try { document.documentElement.setAttribute('lang', l); } catch(_){ }
+}
 
 // Autocomplete using shared /api/all-names
-const ALL_NAMES = {};
+// Use the shared global cache from game.js if present to avoid redeclaration errors
+window.ALL_NAMES = window.ALL_NAMES || {};
 function normalizeName(s){
   if (typeof s !== 'string') s = String(s||'');
   s = s.normalize('NFKD');
@@ -171,6 +178,19 @@ async function submitGuess(text){
 
 window.addEventListener('DOMContentLoaded', async ()=>{
   if (!document.querySelector('[data-game="daily"]')) return;
+
+  // Initialize language and UI
+  setLang(getLang());
+  const langSel = document.getElementById('lang-select');
+  if (langSel) {
+    langSel.value = getLang();
+    langSel.addEventListener('change', async () => {
+      setLang(langSel.value);
+      hideSuggestions();
+      try { await preloadNames(getLang()); } catch (_) {}
+    });
+  }
+
   try { await preloadNames(getLang()); } catch(_){ }
 
   // restore previous attempts for today
