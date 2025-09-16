@@ -361,9 +361,9 @@ def random_sprite():
                 # Increase zoom so we reveal less of the sprite (harder)
                 # We'll set background-size to 500% so an even smaller snippet is shown initially
                 bg_size = '500% 500%'
-                # random position in %
-                x = random.randint(0, 100)
-                y = random.randint(0, 100)
+                # random position in %, keep a 10% margin from edges to avoid empty borders
+                x = random.randint(15, 85)
+                y = random.randint(15, 85)
                 bg_pos = f"{x}% {y}%"
                 # Localized display name for reveal/feedback
                 display_name = get_localized_name(pid, lang)
