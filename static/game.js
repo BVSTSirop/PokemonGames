@@ -40,6 +40,7 @@ const I18N = {
     'aria.suggestions': 'Suggestions',
     'feedback.correct': 'Correct! It is {name}',
     'feedback.reveal': 'It was {name}',
+    'feedback.wrong': 'Nope, try again!',
     'hud.score': 'Score',
     'hud.streak': 'Streak'
   },
@@ -56,6 +57,7 @@ const I18N = {
     'aria.suggestions': 'Sugerencias',
     'feedback.correct': '¡Correcto! Es {name}',
     'feedback.reveal': 'Era {name}',
+    'feedback.wrong': '¡No! Intenta de nuevo.',
     'hud.score': 'Puntuación',
     'hud.streak': 'Racha'
   },
@@ -72,6 +74,7 @@ const I18N = {
     'aria.suggestions': 'Suggestions',
     'feedback.correct': 'Correct ! C’est {name}',
     'feedback.reveal': 'C’était {name}',
+    'feedback.wrong': 'Non, réessayez !',
     'hud.score': 'Score',
     'hud.streak': 'Série'
   },
@@ -88,6 +91,7 @@ const I18N = {
     'aria.suggestions': 'Vorschläge',
     'feedback.correct': 'Richtig! Es ist {name}',
     'feedback.reveal': 'Es war {name}',
+    'feedback.wrong': 'Falsch, versuche es nochmal!',
     'hud.score': 'Punkte',
     'hud.streak': 'Serie'
   }
@@ -382,6 +386,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
       // Increment wrong attempts and give a visual hint by zooming out
       state.attemptsWrong = (state.attemptsWrong || 0) + 1;
+      // Feedback message for wrong guess
+      fb.textContent = t('feedback.wrong');
+      fb.className = 'feedback prominent incorrect';
       const el = document.getElementById('sprite-crop');
       if (el) {
         // Ensure we are not in revealed state

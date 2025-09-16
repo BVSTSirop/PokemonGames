@@ -84,6 +84,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (fb) { fb.textContent = (typeof t==='function'? t('feedback.correct', { name: res.name }) : `Correct! It is ${res.name}`); fb.className = 'feedback prominent correct'; }
       } else {
         state.attemptsWrong = (state.attemptsWrong || 0) + 1;
+        if (fb) { fb.textContent = (typeof t==='function'? t('feedback.wrong') : 'Nope, try again!'); fb.className = 'feedback prominent incorrect'; }
       }
     });
   }
