@@ -15,7 +15,7 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .pokeball{display:inline-block;width:22px;height:22px;border-radius:50%;background:
   radial-gradient(circle at 50% 50%, #fff 0%, #fff 40%, #000 40%, #000 43%, #e3350d 43%, #e3350d 100%);
   box-shadow:0 0 0 2px #0004}
-.site-nav a{color:#fff;text-decoration:none;font-weight:600;opacity:.9;margin-left:12px}
+.site-nav a{color:#fff;text-decoration:none;font-weight:600;opacity:1;margin-left:12px}
 .site-nav a:first-child{margin-left:0}
 .site-nav a[aria-current="page"]{text-decoration:underline}
 
@@ -73,9 +73,42 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .feedback{min-height:24px;margin:10px 0;font-weight:800}
 .feedback.prominent{font-size:20px; line-height:1.3; padding:10px 12px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,.25)}
 /* Make feedback backgrounds solid and non-transparent for better contrast */
-.correct{background:#34c759; color:#0b1021; border:1px solid #1da548}
-.reveal{background:#ffea61; color:#1b223e; border:1px solid #caa300}
-.incorrect{background:#ff3b30; color:#0b1021; border:1px solid #cf2a22}
+.correct{background:#1e7f33; color:#ffffff; border:1px solid #145523; text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.reveal{background:#b38f00; color:#ffffff; border:1px solid #7a6200; text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.incorrect{background:#c0261d; color:#ffffff; border:1px solid #7a1612; text-shadow:0 1px 0 rgba(0,0,0,.25)}
+
+/* Daily table with colored cells instead of pills */
+.table-wrap{overflow:auto; padding:0; border-radius:14px; border:1px solid #27306a; box-shadow:var(--shadow); background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02))}
+.daily-table{width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; max-width:100%}
+.daily-table th,.daily-table td{padding:10px 12px; border-right:1px solid #27306a; border-bottom:1px solid #27306a; white-space:normal; overflow-wrap:anywhere; word-break:break-word}
+.daily-table thead th{background:linear-gradient(180deg,#0e1740,#0c1330); color:#ffea61; position:sticky; top:0; z-index:1; text-transform:uppercase; letter-spacing:.4px; font-size:12px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:inset 0 -1px 0 rgba(0,0,0,.35)}
+.daily-table tbody tr:nth-child(even) td:not(.correct):not(.reveal):not(.incorrect){background:#0e1535}
+.daily-table tbody tr:hover td:not(.correct):not(.reveal):not(.incorrect){background:#131b43}
+.daily-table td{vertical-align:middle; font-weight:700; color:var(--text); transition:background .2s ease, color .2s ease}
+.daily-table td.correct,.daily-table td.reveal,.daily-table td.incorrect{border-right-color:rgba(0,0,0,.25); border-bottom-color:rgba(0,0,0,.25)}
+/* Capitalize readable text columns (Pokémon, Type 1, Type 2, Color) */
+.daily-table tbody td:nth-child(1),
+.daily-table tbody td:nth-child(2),
+.daily-table tbody td:nth-child(3),
+.daily-table tbody td:nth-child(8){ text-transform:capitalize }
+/* Rounded corners for the table by masking first/last cells */
+.daily-table thead th:first-child{border-top-left-radius:12px}
+.daily-table thead th:last-child{border-top-right-radius:12px}
+.daily-table tr:last-child td:first-child{border-bottom-left-radius:12px}
+.daily-table tr:last-child td:last-child{border-bottom-right-radius:12px}
+/* Column alignment: center numeric-ish columns */
+.daily-table td:nth-child(2),
+.daily-table td:nth-child(3),
+.daily-table td:nth-child(4),
+.daily-table td:nth-child(5),
+.daily-table td:nth-child(6),
+.daily-table td:nth-child(7),
+.daily-table td:nth-child(8){text-align:center}
+/* Responsive adjustments */
+@media (max-width: 640px){
+  .daily-table th,.daily-table td{padding:8px 8px}
+  .daily-table thead th{font-size:11px}
+}
 
 .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px, 1px, 1px, 1px);white-space:nowrap}
 
