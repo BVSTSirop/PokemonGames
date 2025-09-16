@@ -1,7 +1,7 @@
 :root{--bg:#0b1021;--bg-soft:#12183a;--card:#0f1631;--text:#f5f7ff;--muted:#c9d0ff;--accent:#ffcc01;--accent-2:#e3350d;--accent-3:#3b4cca;--ok:#34c759;--err:#ff3b30;--shadow:0 8px 24px rgba(16,24,40,.35)}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:linear-gradient(180deg,var(--bg) 0%,#0d1230 100%);color:var(--text);-webkit-font-smoothing:antialiased}
+body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:linear-gradient(180deg,var(--bg) 0%,#0d1230 100%);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
 
 .container{max-width:960px;margin:0 auto;padding:16px}
 
@@ -129,3 +129,7 @@ max-height:240px;overflow:auto;line-height:1.5;font-weight:700;z-index:1}
   .btn{transition:none}
   .sprite-skeleton{animation:none}
 }
+
+
+/* Layout: make footer stick to bottom on short pages */
+main{flex:1 0 auto}
