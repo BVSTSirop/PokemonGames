@@ -323,6 +323,10 @@ function handleKeyNav(e) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // Only initialize on pages that have the sprite game section
+  if (!document.querySelector('[data-game="sprite"]')) {
+    return;
+  }
   // Initialize language and UI
   setLang(getLang());
   translatePage();

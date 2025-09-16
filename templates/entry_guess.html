@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="game card" data-game="entry">
+  <h2 class="game-title">Guess the Pokémon from its Pokédex entry</h2>
+
+  <div class="hud">
+    <div class="hud-item"><span>Score</span>: <strong id="hud-score">0</strong></div>
+    <div class="hud-item"><span>Streak</span>: <strong id="hud-streak">0</strong></div>
+  </div>
+
+  <div class="entry-frame">
+    <div id="entry-text" class="entry-text" role="note" aria-live="polite"></div>
+  </div>
+
+  <form id="guess-form" class="guess-form" autocomplete="off">
+    <label class="visually-hidden" for="guess-input">Your guess</label>
+    <div class="input-wrap">
+      <input id="guess-input" name="guess" placeholder="Type a Pokémon name..." autocomplete="off" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+      <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions"></div>
+    </div>
+    <button class="btn btn-primary" type="submit">Guess</button>
+  </form>
+
+  <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+  <div class="controls">
+    <button class="btn" id="reveal-btn" type="button">Reveal</button>
+    <button class="btn btn-accent" id="next-btn" type="button">Next</button>
+  </div>
+</section>
+<script src="/static/entry_game.js" defer></script>
+{% endblock %}

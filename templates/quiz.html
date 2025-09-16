@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="card" style="max-width:720px;margin:20px auto;">
+  <h2 class="game-title">{{ title or 'Quiz (Coming Soon)' }}</h2>
+  <p style="color:var(--muted);font-weight:600">This game mode is not available yet. Check back later!</p>
+  <div style="margin-top:12px">
+    <a class="btn" href="/">Back to Guess</a>
+  </div>
+</section>
+{% endblock %}
