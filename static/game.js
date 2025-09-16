@@ -1,5 +1,8 @@
 let state = { token: null, answer: null };
 
+// Localized names cache: { lang: [names...] }
+const ALL_NAMES = {};
+
 // --- Simple client-side i18n ---
 const I18N = {
   en: {
@@ -143,6 +146,28 @@ function debounce(fn, delay) {
   };
 }
 
+function normalizeName(s) {
+  if (typeof s !== 'string') s = String(s || '');
+  s = s.normalize('NFKD');
+  // remove diacritics
+  s = s.replace(/[\u0300-\u036f]/g, '');
+  s = s.toLowerCase();
+  return s.replace(/\s|[-'’´`\.]/g, '');
+}
+
+async function preloadNames(lang) {
+  const l = I18N[lang] ? lang : 'en';
+  if (ALL_NAMES[l]) return ALL_NAMES[l];
+  const res = await fetch(`/api/all-names?lang=${encodeURIComponent(l)}`);
+  const data = await res.json();
+  if (Array.isArray(data)) {
+    ALL_NAMES[l] = data;
+  } else {
+    ALL_NAMES[l] = [];
+  }
+  return ALL_NAMES[l];
+}
+
 function renderSuggestions(items) {
   const box = document.getElementById('suggestions');
   box.innerHTML = '';
@@ -184,17 +209,24 @@ async function fetchSuggestions(query) {
     return;
   }
   try {
-    const url = `/api/pokemon-suggest?q=${encodeURIComponent(query)}&limit=20&lang=${encodeURIComponent(getLang())}`;
-    if (suggController) {
-      try { suggController.abort(); } catch (_) {}
+    // Ensure names are preloaded for current language
+    const names = await preloadNames(getLang());
+    const qn = normalizeName(query);
+    const starts = [];
+    const contains = [];
+    for (const n of names) {
+      const nn = normalizeName(n);
+      if (nn.startsWith(qn)) {
+        starts.push(n);
+      } else if (nn.includes(qn)) {
+        contains.push(n);
+      }
+      if (starts.length >= 20) break;
     }
-    suggController = new AbortController();
-    const res = await fetch(url, { signal: suggController.signal });
-    const names = await res.json();
-    renderSuggestions(Array.isArray(names) ? names : []);
-    document.getElementById('guess-input').setAttribute('aria-expanded', names && names.length ? 'true' : 'false');
+    const list = starts.length < 20 ? starts.concat(contains).slice(0, 20) : starts.slice(0, 20);
+    renderSuggestions(list);
+    document.getElementById('guess-input').setAttribute('aria-expanded', list && list.length ? 'true' : 'false');
   } catch (_) {
-    // Ignore abort errors; hide suggestions on other failures
     hideSuggestions();
   }
 }
@@ -247,21 +279,25 @@ function handleKeyNav(e) {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   // Set initial language and translate UI
   setLang(getLang());
   translatePage();
+  // Preload names for current language
+  try { await preloadNames(getLang()); } catch (_) {}
   // Hook up language selector
   const langSel = document.getElementById('lang-select');
   if (langSel) {
     langSel.value = getLang();
-    langSel.addEventListener('change', () => {
+    langSel.addEventListener('change', async () => {
       setLang(langSel.value);
       translatePage();
+      hideSuggestions();
+      try { await preloadNames(getLang()); } catch (_) {}
     });
   }
 
-  // No initial full list; suggestions are fetched as the user types
+  // Start a new round
   newRound();
 
   const inputEl = document.getElementById('guess-input');

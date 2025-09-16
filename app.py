@@ -24,6 +24,11 @@ SUPPORTED_LANGS = {'en', 'es', 'fr', 'de'}
 # Thread pool for parallel species fetches (bounded to be polite to PokeAPI)
 EXECUTOR = ThreadPoolExecutor(max_workers=8)
 
+# Warmup flag
+WARMED = False
+# Warmup scheduling guard (for Flask 3.1 where before_first_request is removed)
+WARMUP_SCHEDULED = False
+
 
 def get_pokemon_list():
     """Return cached list of Pokemon with ids and English display names."""
@@ -126,11 +131,122 @@ def index():
     return render_template('index.html')
 
 
+def _fetch_and_cache_species(pid: int):
+    """Fetch species once and cache all supported lang names for the pokemon id."""
+    url = f"{POKEAPI_BASE}/pokemon-species/{pid}"
+    r = requests.get(url, timeout=12)
+    r.raise_for_status()
+    j = r.json()
+    names_list = j.get('names', [])
+    lang_map = {}
+    for entry in names_list:
+        nm = entry.get('name')
+        lang_code = (entry.get('language') or {}).get('name')
+        if nm and lang_code:
+            if lang_code in SUPPORTED_LANGS:
+                lang_map[lang_code] = nm
+            elif lang_code == 'en':
+                lang_map['en'] = nm
+    # Ensure English fallback is present
+    if 'en' not in lang_map:
+        for p in get_pokemon_list():
+            if p['id'] == pid:
+                lang_map['en'] = p['display_en']
+                break
+    SPECIES_NAMES[pid] = {**SPECIES_NAMES.get(pid, {}), **lang_map}
+
+
+def warm_up_all_names():
+    """Prefetch all Pokémon species names for all supported languages into SPECIES_NAMES."""
+    global WARMED
+    try:
+        lst = get_pokemon_list()
+        ids = [p['id'] for p in lst]
+        futures = [EXECUTOR.submit(_fetch_and_cache_species, pid) for pid in ids]
+        for f in as_completed(futures):
+            try:
+                f.result()
+            except Exception:
+                # Ignore individual failures; we'll fallback to English later
+                pass
+        WARMED = True
+    except Exception:
+        # Leave WARMED as False; endpoints can still operate lazily
+        WARMED = False
+
+
+# Schedule warmup once on the first incoming request (Flask 3.1 compatible)
+@app.before_request
+def _schedule_warmup():
+    global WARMUP_SCHEDULED
+    if not WARMUP_SCHEDULED:
+        EXECUTOR.submit(warm_up_all_names)
+        WARMUP_SCHEDULED = True
+
+
+def ensure_language_filled(lang: str):
+    """Ensure SPECIES_NAMES contains entries for the given language for all Pokémon.
+    Performs on-demand fetches for ids missing the language."""
+    lst = get_pokemon_list()
+    missing = [p['id'] for p in lst if lang not in SPECIES_NAMES.get(p['id'], {})]
+    if not missing:
+        return
+    # Fetch missing species in parallel
+    futures = [EXECUTOR.submit(_fetch_and_cache_species, pid) for pid in missing]
+    for f in as_completed(futures):
+        try:
+            f.result()
+        except Exception:
+            pass
+
+
+@app.route('/api/all-names')
+def all_names():
+    try:
+        lang = (request.args.get('lang') or 'en').lower()
+        if lang not in SUPPORTED_LANGS:
+            lang = 'en'
+        if lang == 'en':
+            return jsonify(fetch_all_pokemon_names())
+        ensure_language_filled(lang)
+        lst = get_pokemon_list()
+        names = []
+        for p in lst:
+            pid = p['id']
+            nm = SPECIES_NAMES.get(pid, {}).get(lang) or p['display_en']
+            names.append(nm)
+        return jsonify(names)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/pokemon-names')
 def pokemon_names():
+    """Backward-compatible endpoint returning English names list.
+    Accepts optional ?lang=xx to return localized names if already warmed.
+    """
     try:
-        names = fetch_all_pokemon_names()
-        return jsonify(names)
+        lang = (request.args.get('lang') or 'en').lower()
+        if lang not in SUPPORTED_LANGS:
+            lang = 'en'
+        if lang == 'en':
+            names = fetch_all_pokemon_names()
+            return jsonify(names)
+        # Non-English: if warmed, return localized; else trigger limited fetch to avoid latency
+        lst = get_pokemon_list()
+        names_loc = []
+        for p in lst:
+            pid = p['id']
+            name = SPECIES_NAMES.get(pid, {}).get(lang)
+            if not name:
+                # Try fetching once; _fetch_and_cache_species caches all langs for this id
+                try:
+                    _fetch_and_cache_species(pid)
+                except Exception:
+                    pass
+                name = SPECIES_NAMES.get(pid, {}).get(lang) or p['display_en']
+            names_loc.append(name)
+        return jsonify(names_loc)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -150,76 +266,33 @@ def pokemon_suggest():
             # Do not return the whole list when empty input; return empty suggestions
             return jsonify([])
 
-        # English: match against English display names as before
+        # Build the names list for the requested language from cache; fallback to English display where missing
         if lang == 'en':
-            names_en = [p['display_en'] for p in lst]
-            q_low = q.lower()
-            starts = [n for n in names_en if n.lower().startswith(q_low)]
-            if len(starts) < limit:
-                contains = [n for n in names_en if q_low in n.lower() and n not in starts]
-                selected = (starts + contains)[:limit]
-            else:
-                selected = starts[:limit]
-            return jsonify(selected)
-
-        # Non-English: language-aware matching using localized species names.
-        # Fast path: search cached localized names first, then fetch missing in parallel if needed.
-        q_norm = normalize_name(q)
-        results = []
-        seen = set()
-
-        # Gather cached localized names
-        cached_entries = []  # list of (id, name)
-        missing_ids = []
-        for p in lst:
-            pid = p['id']
-            name_loc = SPECIES_NAMES.get(pid, {}).get(lang)
-            if name_loc:
-                cached_entries.append((pid, name_loc))
-            else:
-                missing_ids.append(pid)
-
-        # Helper to add a name if it matches the query
-        def consider(name_loc: str):
-            nonlocal results
-            if not name_loc:
-                return False
-            nn = normalize_name(name_loc)
-            if nn.startswith(q_norm) or (q_norm in nn and len(results) < limit):
-                if name_loc not in seen:
-                    results.append(name_loc)
-                    seen.add(name_loc)
-                    return True
-            return False
-
-        # First pass on cached, prioritize startswith then contains implicitly via consider
-        for _, name_loc in cached_entries:
-            if len(results) >= limit:
-                break
-            consider(name_loc)
-
-        if len(results) >= limit or not missing_ids:
-            return jsonify(results[:limit])
-
-        # Fetch missing in parallel but with a cap per request
-        max_new_calls = min(24, max(8, limit * 2))
-        ids_to_fetch = missing_ids[:max_new_calls]
-
-        def fetch_and_store(pid):
-            try:
-                name = get_localized_name(pid, lang)
-                return pid, name
-            except Exception:
-                return pid, None
-
-        futures = [EXECUTOR.submit(fetch_and_store, pid) for pid in ids_to_fetch]
-        for f in as_completed(futures):
-            pid, name_loc = f.result()
-            # get_localized_name has stored the name in SPECIES_NAMES cache; use returned value
-            if consider(name_loc) and len(results) >= limit:
-                break
-
-        return jsonify(results[:limit])
+            names = [p['display_en'] for p in lst]
+            q_norm = q.lower()
+            starts = [n for n in names if n.lower().startswith(q_norm)]
+            contains = [n for n in names if q_norm in n.lower() and n not in starts]
+            return jsonify((starts + contains)[:limit])
+        else:
+            names = []
+            for p in lst:
+                pid = p['id']
+                nm = SPECIES_NAMES.get(pid, {}).get(lang) or p['display_en']
+                names.append(nm)
+            # Deduplicate while preserving order
+            seen = set()
+            uniq = []
+            for n in names:
+                if n not in seen:
+                    uniq.append(n)
+                    seen.add(n)
+            # Normalize and filter
+            q_norm = normalize_name(q)
+            def norm(s: str):
+                return normalize_name(s)
+            starts = [n for n in uniq if norm(n).startswith(q_norm)]
+            contains = [n for n in uniq if q_norm in norm(n) and n not in starts]
+            return jsonify((starts + contains)[:limit])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

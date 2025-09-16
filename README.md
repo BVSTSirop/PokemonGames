@@ -30,8 +30,8 @@ python app.py
 ```
 
 Notes:
-- The app uses PokeAPI; first load of the autocomplete list can take a moment.
-- If PokeAPI rate limits you, simply wait and refresh.
+- The app now prefetches and caches all Pokémon names (en, es, fr, de) on startup/first use and serves a full localized list to the browser, so autocomplete is instant and fully translated.
+- If PokeAPI rate limits you during warmup, the app falls back to English where necessary and fills in missing localized names as soon as possible.
 
 ## Project Structure
 ```
