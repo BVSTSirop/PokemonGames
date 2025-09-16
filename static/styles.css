@@ -31,6 +31,11 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .game{max-width:720px;margin:20px auto}
 .game-title{font-family:"Luckiest Guy", system-ui; letter-spacing:.5px; margin:0 0 12px; font-size:24px; color:#ffea61}
 
+/* HUD for score and streak */
+.hud{display:flex;gap:16px;align-items:center;justify-content:center;margin:8px 0 4px;color:var(--muted);font-weight:700}
+.hud .hud-item{background:#0c1330;border:1px solid #2b386f;border-radius:10px;padding:6px 10px}
+.hud strong{color:#ffea61}
+
 .sprite-frame{position:relative;width:min(90vw,360px);height:min(90vw,360px);border-radius:12px;overflow:hidden;margin:12px auto 16px;background:
   linear-gradient(45deg,#1c2252 25%,#27306a 25% 50%,#1c2252 50% 75%,#27306a 75%);
   background-size:32px 32px;border:2px solid #3b4cca}

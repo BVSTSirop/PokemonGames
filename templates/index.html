@@ -2,6 +2,12 @@
 {% block content %}
 <section class="game card">
   <h2 class="game-title" data-i18n="game.title">Guess the Pokémon from a sprite part</h2>
+
+  <div class="hud">
+    <div class="hud-item"><span data-i18n="hud.score">Score</span>: <strong id="hud-score">0</strong></div>
+    <div class="hud-item"><span data-i18n="hud.streak">Streak</span>: <strong id="hud-streak">0</strong></div>
+  </div>
+
   <div class="sprite-frame">
     <div id="sprite-crop" class="sprite-crop" aria-label="Cropped Pokémon sprite" data-i18n="aria.spriteCrop" data-i18n-attr="aria-label"></div>
     <div class="sprite-skeleton" aria-hidden="true"></div>

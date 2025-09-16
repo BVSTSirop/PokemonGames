@@ -1,4 +1,26 @@
-let state = { token: null, answer: null };
+let state = { token: null, answer: null, attemptsWrong: 0, roundSolved: false, streak: 0, score: 0, roundActive: false };
+
+function loadStats() {
+  try {
+    const raw = localStorage.getItem('stats');
+    const s = raw ? JSON.parse(raw) : {};
+    state.score = Number.isFinite(s.score) ? s.score : 0;
+    state.streak = Number.isFinite(s.streak) ? s.streak : 0;
+  } catch (_) {
+    state.score = 0; state.streak = 0;
+  }
+}
+function saveStats() {
+  try {
+    localStorage.setItem('stats', JSON.stringify({ score: state.score || 0, streak: state.streak || 0 }));
+  } catch (_) {}
+}
+function updateHUD() {
+  const sEl = document.getElementById('hud-score');
+  const stEl = document.getElementById('hud-streak');
+  if (sEl) sEl.textContent = String(state.score || 0);
+  if (stEl) stEl.textContent = String(state.streak || 0);
+}
 
 // Localized names cache: { lang: [names...] }
 const ALL_NAMES = {};
@@ -17,7 +39,9 @@ const I18N = {
     'aria.spriteCrop': 'Cropped Pokémon sprite',
     'aria.suggestions': 'Suggestions',
     'feedback.correct': 'Correct! It is {name}',
-    'feedback.reveal': 'It was {name}'
+    'feedback.reveal': 'It was {name}',
+    'hud.score': 'Score',
+    'hud.streak': 'Streak'
   },
   es: {
     'nav.guess': 'Adivinar',
@@ -31,7 +55,9 @@ const I18N = {
     'aria.spriteCrop': 'Sprite de Pokémon recortado',
     'aria.suggestions': 'Sugerencias',
     'feedback.correct': '¡Correcto! Es {name}',
-    'feedback.reveal': 'Era {name}'
+    'feedback.reveal': 'Era {name}',
+    'hud.score': 'Puntuación',
+    'hud.streak': 'Racha'
   },
   fr: {
     'nav.guess': 'Deviner',
@@ -45,7 +71,9 @@ const I18N = {
     'aria.spriteCrop': 'Sprite de Pokémon recadré',
     'aria.suggestions': 'Suggestions',
     'feedback.correct': 'Correct ! C’est {name}',
-    'feedback.reveal': 'C’était {name}'
+    'feedback.reveal': 'C’était {name}',
+    'hud.score': 'Score',
+    'hud.streak': 'Série'
   },
   de: {
     'nav.guess': 'Raten',
@@ -59,7 +87,9 @@ const I18N = {
     'aria.spriteCrop': 'Zugeschnittener Pokémon-Sprite',
     'aria.suggestions': 'Vorschläge',
     'feedback.correct': 'Richtig! Es ist {name}',
-    'feedback.reveal': 'Es war {name}'
+    'feedback.reveal': 'Es war {name}',
+    'hud.score': 'Punkte',
+    'hud.streak': 'Serie'
   }
 };
 
@@ -101,6 +131,19 @@ function translatePage() {
 }
 
 async function newRound() {
+  // If there was an active round that wasn't solved, reset streak
+  if (state.roundActive && !state.roundSolved) {
+    if (state.streak !== 0) {
+      state.streak = 0;
+      state.score = 0;
+      saveStats();
+      updateHUD();
+    }
+  }
+  state.roundActive = true;
+  state.roundSolved = false;
+  state.attemptsWrong = 0;
+
   const frame = document.querySelector('.sprite-frame');
   frame?.classList.add('loading');
   const res = await fetch(`/api/random-sprite?lang=${encodeURIComponent(getLang())}`);
@@ -119,8 +162,8 @@ async function newRound() {
   void el.offsetWidth;
   el.classList.remove('no-anim');
   const fbEl = document.getElementById('feedback');
-    fbEl.textContent = '';
-    fbEl.className = 'feedback';
+  fbEl.textContent = '';
+  fbEl.className = 'feedback';
   const input = document.getElementById('guess-input');
   input.value = '';
   hideSuggestions();
@@ -280,9 +323,14 @@ function handleKeyNav(e) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // Set initial language and translate UI
+  // Initialize language and UI
   setLang(getLang());
   translatePage();
+
+  // Load stats and update HUD
+  loadStats();
+  updateHUD();
+
   // Preload names for current language
   try { await preloadNames(getLang()); } catch (_) {}
   // Hook up language selector
@@ -314,11 +362,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     const res = await checkGuess(guess);
     const fb = document.getElementById('feedback');
     if (res.correct) {
+      // Award points only the first time the round is solved
+      if (!state.roundSolved) {
+        const wrong = state.attemptsWrong || 0;
+        const points = Math.max(0, 100 - 25 * wrong);
+        state.score = (state.score || 0) + points;
+        state.streak = (state.streak || 0) + 1;
+        state.roundSolved = true;
+        saveStats();
+        updateHUD();
+      }
       fb.textContent = t('feedback.correct', { name: res.name });
       fb.className = 'feedback prominent correct';
       revealFullSprite();
     } else {
-      // No feedback message on wrong guess per requirement; keep zoom-out hint only
+      // Increment wrong attempts and give a visual hint by zooming out
+      state.attemptsWrong = (state.attemptsWrong || 0) + 1;
       const el = document.getElementById('sprite-crop');
       if (el) {
         // Ensure we are not in revealed state
@@ -348,6 +407,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     fb.textContent = t('feedback.reveal', { name: state.answer });
     fb.className = 'feedback prominent reveal';
     revealFullSprite();
+    // Reveal breaks the streak
+    if (state.streak !== 0) {
+      state.streak = 0;
+      state.score = 0;
+      saveStats();
+      updateHUD();
+    }
+    // Mark round as not solved
+    state.roundSolved = false;
   });
 
   document.getElementById('next-btn').addEventListener('click', () => {
