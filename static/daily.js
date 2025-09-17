@@ -69,9 +69,11 @@ const debouncedSuggest = debounce(async (q)=>{
     await preloadNames(getLang());
     const names = ALL_NAMES[getLang()]||[];
     const qn = normalizeName(q);
+    const guessed = guessedTodaySet();
     const starts=[]; const contains=[];
     for (const n of names){
       const nn = normalizeName(n);
+      if (guessed.has(nn)) continue; // skip already guessed
       if (nn.startsWith(qn)) starts.push(n); else if (nn.includes(qn)) contains.push(n);
       if (starts.length>=20) break;
     }
@@ -88,6 +90,19 @@ function loadDaily(){
   try { return JSON.parse(localStorage.getItem('daily')||'{}'); } catch(_){ return {}; }
 }
 function saveDaily(s){ try { localStorage.setItem('daily', JSON.stringify(s||{})); } catch(_){}
+}
+
+// Return a Set of normalized names already guessed today (based on localStorage)
+function guessedTodaySet(){
+  try{
+    const key = todayKey();
+    const daily = loadDaily();
+    const day = daily[key] || {};
+    const rows = Array.isArray(day.rows) ? day.rows : [];
+    const out = new Set();
+    for (const r of rows){ if (r && r.name){ out.add(normalizeName(r.name)); } }
+    return out;
+  }catch(_){ return new Set(); }
 }
 
 function statusText(msg, cls){ const el = document.getElementById('status'); el.textContent = msg||''; el.className = 'feedback' + (cls?(' prominent '+cls):''); }
@@ -222,6 +237,13 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     const text = inputEl.value.trim();
     if (!text) return;
     if (day.done){ statusText('Come back tomorrow for a new Pokémon!', 'reveal'); return; }
+    // Prevent duplicate guesses for today
+    const nn = normalizeName(text);
+    if (guessedTodaySet().has(nn)){
+      statusText('You already guessed that Pokémon today.', 'reveal');
+      hideSuggestions();
+      return;
+    }
     const res = await submitGuess(text);
     if (!res) return;
     renderRow(res.guess);
