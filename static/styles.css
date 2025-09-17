@@ -130,6 +130,11 @@ max-height:240px;overflow:auto;line-height:1.5;font-weight:700;z-index:1}
   .sprite-skeleton{animation:none}
 }
 
+/* Guessed list */
+.guessed-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 4px}
+.guessed-title{color:var(--muted);font-weight:800}
+.guessed-list{display:flex;flex-wrap:wrap;gap:6px}
+.guessed-chip{background:#151d46;border:1px solid #2b386f;border-radius:999px;padding:4px 10px;color:var(--text);font-weight:700;text-transform:capitalize}
 
 /* Layout: make footer stick to bottom on short pages */
 main{flex:1 0 auto}

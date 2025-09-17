@@ -12,6 +12,28 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (typeof loadStats === 'function') loadStats();
   if (typeof updateHUD === 'function') updateHUD();
 
+  // Track guessed names in this round and provide exclusion to suggestions
+  const ENTRY_GUESSED = new Set();
+  function renderGuessed() {
+    const box = document.getElementById('guessed-list');
+    if (!box) return;
+    box.innerHTML = '';
+    const names = (typeof ALL_NAMES !== 'undefined' ? (ALL_NAMES[getLang()] || []) : []);
+    for (const nn of ENTRY_GUESSED) {
+      const chip = document.createElement('span');
+      chip.className = 'guessed-chip';
+      const disp = names.find(n => (typeof normalizeName==='function' ? normalizeName(n) : String(n).toLowerCase()) === nn) || nn;
+      chip.textContent = disp;
+      box.appendChild(chip);
+    }
+  }
+  window.getExcludeNames = () => ENTRY_GUESSED;
+  window.resetGuessed = () => { ENTRY_GUESSED.clear(); renderGuessed(); };
+  window.noteGuessed = (name) => {
+    const nn = (typeof normalizeName==='function' ? normalizeName(name) : String(name||'').trim().toLowerCase());
+    if (!ENTRY_GUESSED.has(nn)) { ENTRY_GUESSED.add(nn); renderGuessed(); }
+  };
+
   async function newRound() {
     // Reset streak if previous round not solved
     if (state.roundActive && !state.roundSolved) {
@@ -24,6 +46,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.roundActive = true;
     state.roundSolved = false;
     state.attemptsWrong = 0;
+
+    // Reset guessed list UI
+    try { window.resetGuessed && window.resetGuessed(); } catch(_){}
 
     const txtEl = document.getElementById('entry-text');
     if (txtEl) {
@@ -85,6 +110,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       } else {
         state.attemptsWrong = (state.attemptsWrong || 0) + 1;
         if (fb) { fb.textContent = (typeof t==='function'? t('feedback.wrong') : 'Nope, try again!'); fb.className = 'feedback prominent incorrect'; }
+        try { window.noteGuessed && window.noteGuessed(guess); } catch(_){}
       }
     });
   }
@@ -116,6 +142,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     langSel.addEventListener('change', async () => {
       setLang(langSel.value);
       try { await preloadNames(getLang()); } catch (_) {}
+      // Re-render guessed list in potentially different language
+      renderGuessed();
       // Get a new entry in the selected language
       newRound();
     });

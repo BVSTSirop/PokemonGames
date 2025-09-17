@@ -148,6 +148,9 @@ async function newRound() {
   state.roundSolved = false;
   state.attemptsWrong = 0;
 
+  // Reset guessed list for this round if handler exists
+  if (typeof window.resetGuessed === 'function') { try { window.resetGuessed(); } catch(_){} }
+
   const frame = document.querySelector('.sprite-frame');
   frame?.classList.add('loading');
   const res = await fetch(`/api/random-sprite?lang=${encodeURIComponent(getLang())}`);
@@ -261,8 +264,10 @@ async function fetchSuggestions(query) {
     const qn = normalizeName(query);
     const starts = [];
     const contains = [];
+    const exclude = (typeof window.getExcludeNames === 'function') ? window.getExcludeNames() : null;
     for (const n of names) {
       const nn = normalizeName(n);
+      if (exclude && exclude.has(nn)) continue;
       if (nn.startsWith(qn)) {
         starts.push(n);
       } else if (nn.includes(qn)) {
@@ -335,6 +340,29 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLang(getLang());
   translatePage();
 
+  // Guessed names for this round and helpers for suggestions to exclude them
+  const SPRITE_GUESSED = new Set();
+  function renderGuessed() {
+    const box = document.getElementById('guessed-list');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const nn of SPRITE_GUESSED) {
+      const chip = document.createElement('span');
+      chip.className = 'guessed-chip';
+      // Find display name from cached names (try to match original case)
+      const names = ALL_NAMES[getLang()] || [];
+      const disp = names.find(n => normalizeName(n) === nn) || nn;
+      chip.textContent = disp;
+      box.appendChild(chip);
+    }
+  }
+  window.getExcludeNames = () => SPRITE_GUESSED;
+  window.resetGuessed = () => { SPRITE_GUESSED.clear(); renderGuessed(); };
+  window.noteGuessed = (name) => {
+    const nn = normalizeName(name);
+    if (!SPRITE_GUESSED.has(nn)) { SPRITE_GUESSED.add(nn); renderGuessed(); }
+  };
+
   // Load stats and update HUD
   loadStats();
   updateHUD();
@@ -350,6 +378,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       translatePage();
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
+      // Re-render guessed chips with possibly localized names
+      renderGuessed();
     });
   }
 
@@ -389,6 +419,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Feedback message for wrong guess
       fb.textContent = t('feedback.wrong');
       fb.className = 'feedback prominent incorrect';
+      // Note guessed name so it appears in the list and is removed from suggestions
+      try { window.noteGuessed && window.noteGuessed(guess); } catch(_){}
       const el = document.getElementById('sprite-crop');
       if (el) {
         // Ensure we are not in revealed state
