@@ -31,6 +31,38 @@
           <option value="fr">Français</option>
           <option value="de">Deutsch</option>
         </select>
+        <div class="gen-dropdown" id="gen-dropdown" aria-label="Generation selector">
+          <button class="gen-toggle" id="gen-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false" title="Select generations">
+            <span class="gen-label">All Generations</span>
+            <span class="gen-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="gen-menu" id="gen-dropdown-menu" role="menu" aria-label="Generations">
+            <label class="gen-option"><input type="checkbox" value="all" checked> All Generations</label>
+            <label class="gen-option"><input type="checkbox" value="1"> Gen 1</label>
+            <label class="gen-option"><input type="checkbox" value="2"> Gen 2</label>
+            <label class="gen-option"><input type="checkbox" value="3"> Gen 3</label>
+            <label class="gen-option"><input type="checkbox" value="4"> Gen 4</label>
+            <label class="gen-option"><input type="checkbox" value="5"> Gen 5</label>
+            <label class="gen-option"><input type="checkbox" value="6"> Gen 6</label>
+            <label class="gen-option"><input type="checkbox" value="7"> Gen 7</label>
+            <label class="gen-option"><input type="checkbox" value="8"> Gen 8</label>
+            <label class="gen-option"><input type="checkbox" value="9"> Gen 9</label>
+          </div>
+        </div>
+        <!-- Hidden select maintained for compatibility with existing JS logic -->
+        <label for="gen-select" class="visually-hidden">Generation</label>
+        <select id="gen-select" aria-label="Generation" multiple style="display:none">
+          <option value="all">All Generations</option>
+          <option value="1">Gen 1</option>
+          <option value="2">Gen 2</option>
+          <option value="3">Gen 3</option>
+          <option value="4">Gen 4</option>
+          <option value="5">Gen 5</option>
+          <option value="6">Gen 6</option>
+          <option value="7">Gen 7</option>
+          <option value="8">Gen 8</option>
+          <option value="9">Gen 9</option>
+        </select>
       </div>
     </div>
   </header>

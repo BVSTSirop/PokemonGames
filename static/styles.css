@@ -19,10 +19,22 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .site-nav a:first-child{margin-left:0}
 .site-nav a[aria-current="page"]{text-decoration:underline}
 
-/* Language switcher */
-.lang-switcher{display:flex;align-items:center;gap:8px}
+/* Language and generation switchers */
+.lang-switcher{display:flex;align-items:center;gap:8px;position:relative}
 .lang-select{appearance:none;background:#151d46;color:#fff;border:1px solid #2b386f;border-radius:10px;padding:8px 10px;font-weight:600;cursor:pointer}
 .lang-select:focus{outline:none;border-color:#5b6df8;box-shadow:0 0 0 3px rgba(59,76,202,.35)}
+
+/* Nice dropdown with checkboxes for generations */
+.gen-dropdown{position:relative}
+.gen-toggle{display:flex;align-items:center;gap:8px;background:#151d46;color:#fff;border:1px solid #2b386f;border-radius:10px;padding:8px 10px;font-weight:700;cursor:pointer;box-shadow:none}
+.gen-toggle:hover{filter:brightness(1.08)}
+.gen-toggle:focus{outline:none;border-color:#5b6df8;box-shadow:0 0 0 3px rgba(59,76,202,.35)}
+.gen-caret{font-size:12px;opacity:.9}
+.gen-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:220px;background:#0c1330;border:1px solid #34407f;border-radius:12px;box-shadow:var(--shadow);padding:8px 6px;display:none;z-index:20}
+.gen-menu.open{display:block}
+.gen-option{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;user-select:none}
+.gen-option input{accent-color:#5b6df8}
+.gen-option:hover{background:#151d46}
 
 .site-footer{margin-top:32px;border-top:1px solid #2a3566;background:rgba(0,0,0,.25)}
 .site-footer p{color:var(--muted);font-size:14px}

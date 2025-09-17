@@ -13,6 +13,8 @@ from services.pokemon import (
     ensure_language_filled,
     normalize_name,
     SPECIES_NAMES,
+    filter_pokemon_list_by_gen,
+    pick_random_id_for_gen,
 )
 
 bp = Blueprint('guess', __name__)
@@ -30,12 +32,15 @@ def index():
 def all_names():
     try:
         lang = (request.args.get('lang') or 'en').lower()
+        gen = (request.args.get('gen') or '').strip()
         if lang not in SUPPORTED_LANGS:
             lang = 'en'
-        if lang == 'en':
-            return jsonify(fetch_all_pokemon_names())
-        ensure_language_filled(lang)
         lst = get_pokemon_list()
+        lst = filter_pokemon_list_by_gen(lst, gen)
+        if lang == 'en':
+            names = [p['display_en'] for p in lst]
+            return jsonify(names)
+        ensure_language_filled(lang)
         names = []
         for p in lst:
             pid = p['id']
@@ -50,12 +55,14 @@ def all_names():
 def pokemon_names():
     try:
         lang = (request.args.get('lang') or 'en').lower()
+        gen = (request.args.get('gen') or '').strip()
         if lang not in SUPPORTED_LANGS:
             lang = 'en'
-        if lang == 'en':
-            names = fetch_all_pokemon_names()
-            return jsonify(names)
         lst = get_pokemon_list()
+        lst = filter_pokemon_list_by_gen(lst, gen)
+        if lang == 'en':
+            names = [p['display_en'] for p in lst]
+            return jsonify(names)
         names_loc = []
         for p in lst:
             pid = p['id']
@@ -157,11 +164,11 @@ def pokemon_suggest():
 def random_sprite():
     try:
         lang = (request.args.get('lang') or 'en').lower()
+        gen = (request.args.get('gen') or '').strip()
         if lang not in SUPPORTED_LANGS:
             lang = 'en'
-        max_id = 1025
-        for _ in range(10):
-            pid = random.randint(1, max_id)
+        for _ in range(15):
+            pid = pick_random_id_for_gen(gen)
             sprite, name = get_sprite_for_pokemon(pid)
             if sprite:
                 token = secrets.token_urlsafe(16)

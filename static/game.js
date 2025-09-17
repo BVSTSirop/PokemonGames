@@ -22,8 +22,155 @@ function updateHUD() {
   if (stEl) stEl.textContent = String(state.streak || 0);
 }
 
-// Localized names cache: { lang: [names...] }
+// Localized names cache per (lang|genCSV) key: { 'en|all' or 'en|1,3,5': [names...] }
 const ALL_NAMES = {};
+
+function canonicalizeGen(gen) {
+  if (!gen) return 'all';
+  const str = String(gen).toLowerCase();
+  if (str === 'all' || str === 'any' || str === '0') return 'all';
+  let arr = Array.isArray(gen) ? gen.slice() : str.replace(/\|/g, ',').split(',');
+  arr = arr.map(s => String(s).trim()).filter(s => /^[1-9]$/.test(s));
+  if (arr.length === 0) return 'all';
+  const uniq = Array.from(new Set(arr)).sort((a, b) => Number(a) - Number(b));
+  return uniq.join(',');
+}
+function getGen() {
+  const saved = localStorage.getItem('gen');
+  return canonicalizeGen(saved);
+}
+function setGen(gen) {
+  const csv = canonicalizeGen(gen);
+  localStorage.setItem('gen', csv);
+}
+function namesCacheKey(lang = getLang(), gen = getGen()) {
+  return `${lang}|${canonicalizeGen(gen)}`;
+}
+function getCachedNames(lang = getLang(), gen = getGen()) {
+  return ALL_NAMES[namesCacheKey(lang, gen)] || [];
+}
+function setGenSelectValue(sel, genCSV = getGen()) {
+  if (!sel) return;
+  const csv = canonicalizeGen(genCSV);
+  const selected = csv === 'all' ? new Set(['all']) : new Set(csv.split(','));
+  Array.from(sel.options).forEach(opt => {
+    opt.selected = selected.has(opt.value);
+  });
+}
+function readGenSelect(sel) {
+  if (!sel) return 'all';
+  const values = Array.from(sel.selectedOptions || []).map(o => o.value);
+  if (values.includes('all') || values.length === 0) return 'all';
+  return canonicalizeGen(values);
+}
+
+// ----- Nice dropdown with checkboxes for Generations -----
+function formatGenLabel(csv) {
+  const g = canonicalizeGen(csv);
+  if (g === 'all') return 'All Generations';
+  const parts = g.split(',').map(n => `Gen ${n}`);
+  if (parts.length <= 3) return parts.join(', ');
+  const head = parts.slice(0, 3).join(', ');
+  return `${head} +${parts.length - 3} more`;
+}
+
+function syncGenDropdownFromSelect() {
+  const sel = document.getElementById('gen-select');
+  const menu = document.getElementById('gen-dropdown-menu');
+  const labelSpan = document.querySelector('#gen-dropdown .gen-label');
+  if (!sel || !menu) return;
+  const csv = readGenSelect(sel);
+  const checkboxes = Array.from(menu.querySelectorAll('input[type="checkbox"]'));
+  const set = csv === 'all' ? new Set(['all']) : new Set(csv.split(','));
+  checkboxes.forEach(cb => {
+    cb.checked = set.has(cb.value);
+  });
+  if (csv !== 'all') {
+    const allCb = menu.querySelector('input[value="all"]');
+    if (allCb) allCb.checked = false;
+  }
+  if (labelSpan) labelSpan.textContent = formatGenLabel(csv);
+}
+
+function syncSelectFromDropdownAndDispatch() {
+  const sel = document.getElementById('gen-select');
+  const menu = document.getElementById('gen-dropdown-menu');
+  if (!sel || !menu) return;
+  const checked = Array.from(menu.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+  let csv;
+  if (checked.includes('all') || checked.length === 0) {
+    csv = 'all';
+  } else {
+    csv = canonicalizeGen(checked);
+  }
+  // Apply to hidden select
+  setGenSelectValue(sel, csv);
+  // Update label
+  syncGenDropdownFromSelect();
+  // Store selection immediately (for non-game pages) and notify listeners
+  setGen(csv);
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function initGenDropdown() {
+  const root = document.getElementById('gen-dropdown');
+  const toggle = document.getElementById('gen-dropdown-toggle');
+  const menu = document.getElementById('gen-dropdown-menu');
+  const sel = document.getElementById('gen-select');
+  if (!root || !toggle || !menu || !sel) return;
+
+  // Initialize from saved selection
+  setGenSelectValue(sel, getGen());
+  syncGenDropdownFromSelect();
+
+  function openMenu() {
+    menu.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+  function closeMenu() {
+    menu.classList.remove('open');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  function toggleMenu() {
+    if (menu.classList.contains('open')) closeMenu(); else openMenu();
+  }
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+  // Checkbox clicks
+  menu.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const val = target.value;
+    if (val === 'all') {
+      if (target.checked) {
+        // Uncheck others
+        menu.querySelectorAll('input[type="checkbox"]').forEach(cb => { if (cb.value !== 'all') cb.checked = false; });
+      }
+    } else {
+      // If any specific selected, uncheck 'all'
+      const allCb = menu.querySelector('input[value="all"]');
+      if (allCb && target.checked) allCb.checked = false;
+      // If none checked, revert to 'all'
+      const anySpecific = Array.from(menu.querySelectorAll('input[type="checkbox"]')).some(cb => cb.value !== 'all' && cb.checked);
+      if (!anySpecific) {
+        if (allCb) allCb.checked = true;
+      }
+    }
+    // Apply to hidden select and notify
+    syncSelectFromDropdownAndDispatch();
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!root.contains(e.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenu();
+  });
+}
 
 // --- Simple client-side i18n ---
 const I18N = {
@@ -129,9 +276,15 @@ function translatePage() {
       el.textContent = val;
     }
   });
-  // Sync selector UI value
-  const sel = document.getElementById('lang-select');
-  if (sel) sel.value = getLang();
+  // Sync selector UI values
+  const langSel = document.getElementById('lang-select');
+  if (langSel) langSel.value = getLang();
+  const genSel = document.getElementById('gen-select');
+  if (genSel) {
+    setGenSelectValue(genSel, getGen());
+    // Also reflect to the fancy dropdown label/checkboxes
+    try { syncGenDropdownFromSelect(); } catch(_) {}
+  }
 }
 
 async function newRound() {
@@ -153,7 +306,7 @@ async function newRound() {
 
   const frame = document.querySelector('.sprite-frame');
   frame?.classList.add('loading');
-  const res = await fetch(`/api/random-sprite?lang=${encodeURIComponent(getLang())}`);
+  const res = await fetch(`/api/random-sprite?lang=${encodeURIComponent(getLang())}&gen=${encodeURIComponent(getGen())}`);
   const data = await res.json();
   state.token = data.token;
   state.answer = data.name; // for Reveal button; not displayed by default
@@ -207,15 +360,17 @@ function normalizeName(s) {
 
 async function preloadNames(lang) {
   const l = I18N[lang] ? lang : 'en';
-  if (ALL_NAMES[l]) return ALL_NAMES[l];
-  const res = await fetch(`/api/all-names?lang=${encodeURIComponent(l)}`);
+  const g = getGen();
+  const key = namesCacheKey(l, g);
+  if (ALL_NAMES[key]) return ALL_NAMES[key];
+  const res = await fetch(`/api/all-names?lang=${encodeURIComponent(l)}&gen=${encodeURIComponent(g)}`);
   const data = await res.json();
   if (Array.isArray(data)) {
-    ALL_NAMES[l] = data;
+    ALL_NAMES[key] = data;
   } else {
-    ALL_NAMES[l] = [];
+    ALL_NAMES[key] = [];
   }
-  return ALL_NAMES[l];
+  return ALL_NAMES[key];
 }
 
 function renderSuggestions(items) {
@@ -331,6 +486,11 @@ function handleKeyNav(e) {
   }
 }
 
+// Initialize the generation fancy dropdown on every page
+window.addEventListener('DOMContentLoaded', () => {
+  try { initGenDropdown(); } catch (_) {}
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
   // Only initialize on pages that have the sprite game section
   if (!document.querySelector('[data-game="sprite"]')) {
@@ -350,7 +510,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const chip = document.createElement('span');
       chip.className = 'guessed-chip';
       // Find display name from cached names (try to match original case)
-      const names = ALL_NAMES[getLang()] || [];
+      const names = getCachedNames(getLang(), getGen()) || [];
       const disp = names.find(n => normalizeName(n) === nn) || nn;
       chip.textContent = disp;
       box.appendChild(chip);
@@ -380,6 +540,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       try { await preloadNames(getLang()); } catch (_) {}
       // Re-render guessed chips with possibly localized names
       renderGuessed();
+    });
+  }
+  // Hook up generation selector
+  const genSel = document.getElementById('gen-select');
+  if (genSel) {
+    setGenSelectValue(genSel, getGen());
+    genSel.addEventListener('change', async () => {
+      const csv = readGenSelect(genSel);
+      setGen(csv);
+      hideSuggestions();
+      try { await preloadNames(getLang()); } catch (_) {}
+      // Reset guessed list as pool changed
+      window.resetGuessed && window.resetGuessed();
+      // Start a fresh round in the selected generation(s)
+      newRound();
     });
   }
 

@@ -8,6 +8,7 @@ from services.pokemon import (
     get_localized_name,
     get_pokedex_entry,
     normalize_name,
+    pick_random_id_for_gen,
 )
 
 bp = Blueprint('entry', __name__, url_prefix='/entry')
@@ -25,11 +26,11 @@ def index():
 def random_entry():
     try:
         lang = (request.args.get('lang') or 'en').lower()
+        gen = (request.args.get('gen') or '').strip()
         if lang not in SUPPORTED_LANGS:
             lang = 'en'
-        max_id = 1025
-        for _ in range(20):
-            pid = random.randint(1, max_id)
+        for _ in range(30):
+            pid = pick_random_id_for_gen(gen)
             entry = get_pokedex_entry(pid, lang)
             if entry:
                 token = secrets.token_urlsafe(16)

@@ -18,7 +18,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const box = document.getElementById('guessed-list');
     if (!box) return;
     box.innerHTML = '';
-    const names = (typeof ALL_NAMES !== 'undefined' ? (ALL_NAMES[getLang()] || []) : []);
+    const names = (typeof getCachedNames === 'function' ? (getCachedNames(getLang(), getGen()) || []) : (typeof ALL_NAMES !== 'undefined' ? (ALL_NAMES[getLang()] || []) : []));
     for (const nn of ENTRY_GUESSED) {
       const chip = document.createElement('span');
       chip.className = 'guessed-chip';
@@ -54,7 +54,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (txtEl) {
       txtEl.textContent = '…';
     }
-    const res = await fetch(`/entry/api/random-entry?lang=${encodeURIComponent(getLang())}`);
+    const res = await fetch(`/entry/api/random-entry?lang=${encodeURIComponent(getLang())}&gen=${encodeURIComponent(getGen())}`);
     const data = await res.json();
     state.token = data.token;
     state.answer = data.name;
@@ -145,6 +145,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Re-render guessed list in potentially different language
       renderGuessed();
       // Get a new entry in the selected language
+      newRound();
+    });
+  }
+  // Handle generation changes
+  const genSel = document.getElementById('gen-select');
+  if (genSel) {
+    if (typeof setGenSelectValue === 'function') setGenSelectValue(genSel, getGen());
+    genSel.addEventListener('change', async () => {
+      const csv = (typeof readGenSelect === 'function') ? readGenSelect(genSel) : (genSel.value || 'all');
+      setGen(csv);
+      try { await preloadNames(getLang()); } catch (_) {}
+      // Reset guessed and start new round for selected generation(s)
+      window.resetGuessed && window.resetGuessed();
       newRound();
     });
   }
