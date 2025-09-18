@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="game card" data-game="scream">
+  <h2 class="game-title" data-i18n="scream.title">Guess the Pokémon from its scream</h2>
+
+  <div class="hud">
+    <div class="hud-item"><span data-i18n="hud.score">Score</span>: <strong id="hud-score">0</strong></div>
+    <div class="hud-item"><span data-i18n="hud.streak">Streak</span>: <strong id="hud-streak">0</strong></div>
+  </div>
+
+  <div class="audio-frame">
+    <button id="play-btn" class="btn btn-accent" type="button" aria-label="Play cry" data-i18n="scream.play" >Play cry</button>
+    <audio id="cry-audio" preload="auto"></audio>
+  </div>
+
+  <form id="guess-form" class="guess-form" autocomplete="off">
+    <label class="visually-hidden" for="guess-input" data-i18n="form.label">Your guess</label>
+    <div class="input-wrap">
+      <input id="guess-input" name="guess" placeholder="Type a Pokémon name..." autocomplete="off" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" data-i18n="form.placeholder" data-i18n-attr="placeholder" />
+      <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions" data-i18n="aria.suggestions" data-i18n-attr="aria-label"></div>
+    </div>
+    <button class="btn btn-primary" type="submit" data-i18n="form.guessBtn">Guess</button>
+  </form>
+
+  <div id="guessed-wrap" class="guessed-wrap" aria-live="polite">
+    <span class="guessed-title">Guessed:</span>
+    <div id="guessed-list" class="guessed-list"></div>
+  </div>
+
+  <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+  <div class="controls">
+    <button class="btn" id="reveal-btn" type="button" data-i18n="controls.reveal">Reveal</button>
+    <button class="btn btn-accent" id="next-btn" type="button" data-i18n="controls.next">Next</button>
+  </div>
+</section>
+<script src="/static/scream.js" defer></script>
+{% endblock %}

@@ -176,6 +176,7 @@ function initGenDropdown() {
 const I18N = {
   en: {
     'nav.guess': 'Guess',
+        'nav.scream': 'Scream',
     'lang.label': 'Language',
     'game.title': 'Guess the Pokémon from a sprite part',
     'form.label': 'Your guess',
@@ -193,6 +194,7 @@ const I18N = {
   },
   es: {
     'nav.guess': 'Adivinar',
+        'nav.scream': 'Grito',
     'lang.label': 'Idioma',
     'game.title': 'Adivina el Pokémon por una parte del sprite',
     'form.label': 'Tu respuesta',
@@ -210,6 +212,7 @@ const I18N = {
   },
   fr: {
     'nav.guess': 'Deviner',
+        'nav.scream': 'Cri',
     'lang.label': 'Langue',
     'game.title': 'Devinez le Pokémon à partir d’une partie du sprite',
     'form.label': 'Votre réponse',
@@ -227,6 +230,7 @@ const I18N = {
   },
   de: {
     'nav.guess': 'Raten',
+        'nav.scream': 'Schrei',
     'lang.label': 'Sprache',
     'game.title': 'Errate das Pokémon anhand eines Sprite-Ausschnitts',
     'form.label': 'Dein Tipp',

@@ -179,6 +179,24 @@ def get_sprite_for_pokemon(poke_id):
     return art, j['name']
 
 
+def get_cry_for_pokemon(poke_id):
+    """Return a cry (scream) audio URL and slug name for the Pokémon id.
+    Tries 'latest' cry first, then falls back to 'legacy' if needed.
+    Returns (audio_url_or_None, name_slug_str).
+    """
+    url = f"{POKEAPI_BASE}/pokemon/{poke_id}"
+    r = requests.get(url, timeout=20)
+    r.raise_for_status()
+    j = r.json()
+    cry = None
+    try:
+        cries = j.get('cries') or {}
+        cry = cries.get('latest') or cries.get('legacy')
+    except Exception:
+        cry = None
+    return cry, j.get('name')
+
+
 def _fetch_and_cache_species(pid: int):
     url = f"{POKEAPI_BASE}/pokemon-species/{pid}"
     r = requests.get(url, timeout=12)
