@@ -72,6 +72,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   const audioEl = document.getElementById('cry-audio');
+  // Set a slightly reduced default volume so cries aren't too loud by default
+  try { audioEl.volume = 0.5; } catch(_) {}
   const playBtn = document.getElementById('play-btn');
   const canvas = document.getElementById('wave-canvas');
   const canvasWrap = document.getElementById('audio-visual');
