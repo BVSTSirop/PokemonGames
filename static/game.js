@@ -175,7 +175,7 @@ function initGenDropdown() {
 // --- Simple client-side i18n ---
 const I18N = {
   en: {
-    'nav.guess': 'Guess',
+    'nav.guess': 'Sprite',
         'nav.scream': 'Scream',
     'lang.label': 'Language',
     'game.title': 'Guess the Pokémon from a sprite part',
@@ -193,7 +193,7 @@ const I18N = {
     'hud.streak': 'Streak'
   },
   es: {
-    'nav.guess': 'Adivinar',
+    'nav.guess': 'Sprite',
         'nav.scream': 'Grito',
     'lang.label': 'Idioma',
     'game.title': 'Adivina el Pokémon por una parte del sprite',
@@ -211,7 +211,7 @@ const I18N = {
     'hud.streak': 'Racha'
   },
   fr: {
-    'nav.guess': 'Deviner',
+    'nav.guess': 'Sprite',
         'nav.scream': 'Cri',
     'lang.label': 'Langue',
     'game.title': 'Devinez le Pokémon à partir d’une partie du sprite',
@@ -229,7 +229,7 @@ const I18N = {
     'hud.streak': 'Série'
   },
   de: {
-    'nav.guess': 'Raten',
+    'nav.guess': 'Sprite',
         'nav.scream': 'Schrei',
     'lang.label': 'Sprache',
     'game.title': 'Errate das Pokémon anhand eines Sprite-Ausschnitts',
