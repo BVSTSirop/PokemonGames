@@ -150,3 +150,15 @@ max-height:240px;overflow:auto;line-height:1.5;font-weight:700;z-index:1}
 
 /* Layout: make footer stick to bottom on short pages */
 main{flex:1 0 auto}
+
+
+/* --- Scream audio UI --- */
+.audio-frame{max-width:720px;margin:14px auto 16px}
+.audio-ui{display:flex;align-items:center;gap:12px;background:#0c1330;border:1px solid #2b386f;border-radius:14px;padding:10px 12px;box-shadow:var(--shadow)}
+.audio-play{width:44px;height:44px;border-radius:50%;border:2px solid #5b6df8;background:linear-gradient(180deg,#3b4cca,#5b6df8);color:#fff;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(0,0,0,.25)}
+.audio-play:hover{filter:brightness(1.06)}
+ .audio-visual{position:relative;flex:1;min-width:120px;height:56px;border-radius:10px;background:linear-gradient(180deg,#0e1740,#0b112e);border:1px solid #1c254d;overflow:hidden;cursor:pointer}
+@media (max-width:560px){
+  .audio-ui{flex-wrap:wrap}
+  .audio-visual{order:2;width:calc(100% - 60px)}
+}

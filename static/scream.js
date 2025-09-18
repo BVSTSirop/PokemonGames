@@ -7,10 +7,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLang(getLang());
   // Extend i18n keys for this page
   const extraI18N = {
-    en: { 'scream.title': 'Guess the Pokémon from its scream', 'scream.play': 'Play cry' },
-    es: { 'scream.title': 'Adivina el Pokémon por su grito', 'scream.play': 'Reproducir grito' },
-    fr: { 'scream.title': 'Devinez le Pokémon à partir de son cri', 'scream.play': 'Lire le cri' },
-    de: { 'scream.title': 'Errate das Pokémon anhand seines Schreis', 'scream.play': 'Schrei abspielen' },
+    en: { 'scream.title': 'Guess the Pokémon from its scream', 'scream.play': 'Play', 'scream.pause': 'Pause', 'scream.replay': 'Replay' },
+    es: { 'scream.title': 'Adivina el Pokémon por su grito', 'scream.play': 'Reproducir', 'scream.pause': 'Pausar', 'scream.replay': 'Repetir' },
+    fr: { 'scream.title': 'Devinez le Pokémon à partir de son cri', 'scream.play': 'Lire', 'scream.pause': 'Pause', 'scream.replay': 'Rejouer' },
+    de: { 'scream.title': 'Errate das Pokémon anhand seines Schreis', 'scream.play': 'Abspielen', 'scream.pause': 'Pause', 'scream.replay': 'Erneut' },
   };
   try {
     Object.keys(extraI18N).forEach(l => { Object.assign(I18N[l] = I18N[l] || {}, extraI18N[l]); });
@@ -73,6 +73,116 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const audioEl = document.getElementById('cry-audio');
   const playBtn = document.getElementById('play-btn');
+  const canvas = document.getElementById('wave-canvas');
+  const canvasWrap = document.getElementById('audio-visual');
+  const ctx = canvas ? canvas.getContext('2d') : null;
+
+  // Ensure cross-origin audio can be analyzed
+  try { audioEl.crossOrigin = 'anonymous'; } catch(_) {}
+
+  let audioCtx = null;
+  let analyser = null;
+  let sourceNode = null;
+  let rafId = null;
+
+  function setPlayState(stateStr) {
+    // stateStr: 'play' | 'pause' | 'replay'
+    if (!playBtn) return;
+    if (stateStr === 'pause') {
+      playBtn.textContent = t('scream.pause');
+      playBtn.setAttribute('aria-label', t('scream.pause'));
+    } else if (stateStr === 'replay') {
+      playBtn.textContent = t('scream.replay');
+      playBtn.setAttribute('aria-label', t('scream.replay'));
+    } else {
+      playBtn.textContent = t('scream.play');
+      playBtn.setAttribute('aria-label', t('scream.play'));
+    }
+  }
+
+  function ensureAudioGraph() {
+    if (audioCtx) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new Ctx();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.7;
+      sourceNode = audioCtx.createMediaElementSource(audioEl);
+      sourceNode.connect(analyser);
+      analyser.connect(audioCtx.destination);
+    } catch (_) {
+      audioCtx = null; analyser = null; sourceNode = null;
+    }
+  }
+
+  function clearCanvas() {
+    if (!ctx || !canvas) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function draw() {
+    if (!ctx || !analyser) return;
+    const { width, height } = canvas;
+    const bufferLen = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLen);
+    analyser.getByteFrequencyData(dataArray);
+
+    // Background
+    ctx.clearRect(0, 0, width, height);
+    const bg = ctx.createLinearGradient(0, 0, 0, height);
+    bg.addColorStop(0, '#0e1740');
+    bg.addColorStop(1, '#0b112e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    // Progress overlay (left side highlight)
+    const dur = audioEl.duration || 0;
+    const cur = audioEl.currentTime || 0;
+    const ratio = dur ? Math.min(1, Math.max(0, cur / dur)) : 0;
+    if (ratio > 0) {
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, 'rgba(255,214,0,0.20)');
+      grad.addColorStop(1, 'rgba(255,214,0,0.08)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width * ratio, height);
+      // Progress line
+      ctx.fillStyle = '#ffd942';
+      ctx.fillRect(width * ratio - 1, 0, 2, height);
+    }
+
+    // Bars
+    const barCount = Math.min(64, bufferLen);
+    const barWidth = width / barCount;
+    for (let i = 0; i < barCount; i++) {
+      const v = dataArray[i] / 255; // 0..1
+      const barH = Math.max(2, v * (height - 6));
+      const x = i * barWidth;
+      const y = height - barH;
+      const hue = 220 - Math.floor(v * 120);
+      const alpha = 0.95;
+      ctx.fillStyle = `hsl(${hue} 80% 60% / ${alpha})`;
+      ctx.fillRect(x + 1, y, Math.max(1, barWidth - 2), barH);
+    }
+
+    rafId = requestAnimationFrame(draw);
+  }
+
+  function stopDrawing() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    clearCanvas();
+  }
+
+  function seekFromCanvas(ev) {
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const ratio = Math.min(1, Math.max(0, x / rect.width));
+    if (Number.isFinite(audioEl.duration) && audioEl.duration > 0) {
+      audioEl.currentTime = ratio * audioEl.duration;
+    }
+  }
 
   async function newRoundScream() {
     // Reset streak if previous round was not solved
@@ -95,6 +205,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     state.token = data.token;
     state.answer = data.name; // for Reveal button
+    stopDrawing();
+    setPlayState('play');
     audioEl.src = data.audio || '';
     document.getElementById('feedback').textContent = '';
     document.getElementById('feedback').className = 'feedback';
@@ -161,7 +273,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     newRoundScream();
   });
 
+  // Audio events & controls
+  audioEl.addEventListener('play', async () => {
+    setPlayState('pause');
+    ensureAudioGraph();
+    try { await audioCtx.resume?.(); } catch(_) {}
+    stopDrawing();
+    draw();
+  });
+  audioEl.addEventListener('pause', () => {
+    setPlayState('play');
+    stopDrawing();
+  });
+  audioEl.addEventListener('ended', () => {
+    setPlayState('replay');
+    stopDrawing();
+  });
+
+  if (canvasWrap) {
+    canvasWrap.addEventListener('click', seekFromCanvas);
+  } else if (canvas) {
+    canvas.addEventListener('click', seekFromCanvas);
+  }
+
   playBtn.addEventListener('click', async () => {
-    try { await audioEl.play(); } catch (_) { /* ignored */ }
+    if (!audioEl.src) return;
+    if (audioEl.paused || audioEl.ended) {
+      try { await audioEl.play(); } catch (_) {}
+    } else {
+      audioEl.pause();
+    }
   });
 });
