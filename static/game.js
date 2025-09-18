@@ -355,7 +355,12 @@ function normalizeName(s) {
   // remove diacritics
   s = s.replace(/[\u0300-\u036f]/g, '');
   s = s.toLowerCase();
-  return s.replace(/\s|[-'’´`\.]/g, '');
+  // map common locale-specific letters
+  s = s.replace(/ß/g, 'ss');
+  // remove gender symbols and any non-alphanumeric characters
+  s = s.replace(/[♂♀]/g, '');
+  s = s.replace(/[^a-z0-9]/g, '');
+  return s;
 }
 
 async function preloadNames(lang) {

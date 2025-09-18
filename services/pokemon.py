@@ -238,8 +238,11 @@ def normalize_name(s: str) -> str:
     s = unicodedata.normalize('NFKD', s)
     s = ''.join(c for c in s if not unicodedata.combining(c))
     s = s.lower()
-    for ch in [' ', '-', "'", '’', '´', '`', '.']:
-        s = s.replace(ch, '')
+    # Map locale-specific letters
+    s = s.replace('ß', 'ss')
+    # Remove gender symbols and any non-alphanumeric characters
+    s = s.replace('♂', '').replace('♀', '')
+    s = ''.join(ch for ch in s if ('a' <= ch <= 'z') or ('0' <= ch <= '9'))
     return s
 
 

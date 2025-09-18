@@ -30,7 +30,12 @@ function normalizeName(s){
   if (typeof s !== 'string') s = String(s||'');
   s = s.normalize('NFKD');
   s = s.replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  return s.replace(/\s|[-'’´`\.]/g, '');
+  // map common locale-specific letters
+  s = s.replace(/ß/g, 'ss');
+  // remove gender symbols and any non-alphanumeric characters
+  s = s.replace(/[♂♀]/g, '');
+  s = s.replace(/[^a-z0-9]/g, '');
+  return s;
 }
 async function preloadNames(lang){
   const l = ['en','es','fr','de'].includes(lang) ? lang : 'en';
