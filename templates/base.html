@@ -18,52 +18,55 @@
         <span class="pokeball" aria-hidden="true">⚪️</span>
         <h1><span class="accent">Pokémon</span> Mini Games</h1>
       </div>
-      <nav class="site-nav" aria-label="Primary">
-        <a href="/" {% if active_page=='guess' %}aria-current="page"{% endif %} data-i18n="nav.guess">Sprite</a>
-        <a href="/scream" {% if active_page=='scream' %}aria-current="page"{% endif %} data-i18n="nav.scream">Scream</a>
-        <a href="/entry" {% if active_page=='entry' %}aria-current="page"{% endif %}>Pokedex</a>
-        <a href="/daily" {% if active_page=='daily' %}aria-current="page"{% endif %}>Daily</a>
-      </nav>
-      <div class="lang-switcher">
-        <label for="lang-select" class="visually-hidden" data-i18n="lang.label">Language</label>
-        <select id="lang-select" class="lang-select" aria-label="Language">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="fr">Français</option>
-          <option value="de">Deutsch</option>
-        </select>
-        <div class="gen-dropdown" id="gen-dropdown" aria-label="Generation selector">
-          <button class="gen-toggle" id="gen-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false" title="Select generations">
-            <span class="gen-label">All Generations</span>
-            <span class="gen-caret" aria-hidden="true">▾</span>
-          </button>
-          <div class="gen-menu" id="gen-dropdown-menu" role="menu" aria-label="Generations">
-            <label class="gen-option"><input type="checkbox" value="all" checked> All Generations</label>
-            <label class="gen-option"><input type="checkbox" value="1"> Gen 1</label>
-            <label class="gen-option"><input type="checkbox" value="2"> Gen 2</label>
-            <label class="gen-option"><input type="checkbox" value="3"> Gen 3</label>
-            <label class="gen-option"><input type="checkbox" value="4"> Gen 4</label>
-            <label class="gen-option"><input type="checkbox" value="5"> Gen 5</label>
-            <label class="gen-option"><input type="checkbox" value="6"> Gen 6</label>
-            <label class="gen-option"><input type="checkbox" value="7"> Gen 7</label>
-            <label class="gen-option"><input type="checkbox" value="8"> Gen 8</label>
-            <label class="gen-option"><input type="checkbox" value="9"> Gen 9</label>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Open menu" aria-controls="mobile-menu" aria-expanded="false">☰</button>
+      <div class="mobile-menu" id="mobile-menu">
+        <nav class="site-nav" aria-label="Primary">
+          <a href="/" {% if active_page=='guess' %}aria-current="page"{% endif %} data-i18n="nav.guess">Sprite</a>
+          <a href="/scream" {% if active_page=='scream' %}aria-current="page"{% endif %} data-i18n="nav.scream">Scream</a>
+          <a href="/entry" {% if active_page=='entry' %}aria-current="page"{% endif %}>Pokedex</a>
+          <a href="/daily" {% if active_page=='daily' %}aria-current="page"{% endif %}>Daily</a>
+        </nav>
+        <div class="lang-switcher">
+          <label for="lang-select" class="visually-hidden" data-i18n="lang.label">Language</label>
+          <select id="lang-select" class="lang-select" aria-label="Language">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+          </select>
+          <div class="gen-dropdown" id="gen-dropdown" aria-label="Generation selector">
+            <button class="gen-toggle" id="gen-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false" title="Select generations">
+              <span class="gen-label">All Generations</span>
+              <span class="gen-caret" aria-hidden="true">▾</span>
+            </button>
+            <div class="gen-menu" id="gen-dropdown-menu" role="menu" aria-label="Generations">
+              <label class="gen-option"><input type="checkbox" value="all" checked> All Generations</label>
+              <label class="gen-option"><input type="checkbox" value="1"> Gen 1</label>
+              <label class="gen-option"><input type="checkbox" value="2"> Gen 2</label>
+              <label class="gen-option"><input type="checkbox" value="3"> Gen 3</label>
+              <label class="gen-option"><input type="checkbox" value="4"> Gen 4</label>
+              <label class="gen-option"><input type="checkbox" value="5"> Gen 5</label>
+              <label class="gen-option"><input type="checkbox" value="6"> Gen 6</label>
+              <label class="gen-option"><input type="checkbox" value="7"> Gen 7</label>
+              <label class="gen-option"><input type="checkbox" value="8"> Gen 8</label>
+              <label class="gen-option"><input type="checkbox" value="9"> Gen 9</label>
+            </div>
           </div>
+          <!-- Hidden select maintained for compatibility with existing JS logic -->
+          <label for="gen-select" class="visually-hidden">Generation</label>
+          <select id="gen-select" aria-label="Generation" multiple style="display:none">
+            <option value="all">All Generations</option>
+            <option value="1">Gen 1</option>
+            <option value="2">Gen 2</option>
+            <option value="3">Gen 3</option>
+            <option value="4">Gen 4</option>
+            <option value="5">Gen 5</option>
+            <option value="6">Gen 6</option>
+            <option value="7">Gen 7</option>
+            <option value="8">Gen 8</option>
+            <option value="9">Gen 9</option>
+          </select>
         </div>
-        <!-- Hidden select maintained for compatibility with existing JS logic -->
-        <label for="gen-select" class="visually-hidden">Generation</label>
-        <select id="gen-select" aria-label="Generation" multiple style="display:none">
-          <option value="all">All Generations</option>
-          <option value="1">Gen 1</option>
-          <option value="2">Gen 2</option>
-          <option value="3">Gen 3</option>
-          <option value="4">Gen 4</option>
-          <option value="5">Gen 5</option>
-          <option value="6">Gen 6</option>
-          <option value="7">Gen 7</option>
-          <option value="8">Gen 8</option>
-          <option value="9">Gen 9</option>
-        </select>
       </div>
     </div>
   </header>
@@ -75,6 +78,25 @@
       <p>Data from <a href="https://pokeapi.co/" target="_blank" rel="noopener">PokeAPI</a>. Not affiliated with Nintendo/Game Freak.</p>
     </div>
   </footer>
+  <script>
+    (function(){
+      const btn = document.getElementById('menu-toggle');
+      const panel = document.getElementById('mobile-menu');
+      if (!btn || !panel) return;
+      function closeOnResize(){
+        if (window.innerWidth > 768){
+          document.body.classList.remove('mobile-open');
+          btn.setAttribute('aria-expanded','false');
+        }
+      }
+      btn.addEventListener('click', function(){
+        const open = !document.body.classList.contains('mobile-open');
+        document.body.classList.toggle('mobile-open', open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      window.addEventListener('resize', closeOnResize);
+    })();
+  </script>
   <script src="/static/game.js" defer></script>
 </body>
 </html>

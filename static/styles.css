@@ -8,13 +8,14 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .site-header{position:sticky;top:0;z-index:10;background:
   linear-gradient(90deg,var(--accent-3) 0%,#5b6df8 40%,#ff4757 80%,var(--accent-2) 100%);
   box-shadow:var(--shadow)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative}
 .brand{display:flex;align-items:center;gap:12px}
 .brand h1{font-family:"Luckiest Guy", system-ui; letter-spacing:1px; font-size:28px; color:#fff; margin:10px 0}
 .brand .accent{color:#ffea61}
 .pokeball{display:inline-block;width:22px;height:22px;border-radius:50%;background:
   radial-gradient(circle at 50% 50%, #fff 0%, #fff 40%, #000 40%, #000 43%, #e3350d 43%, #e3350d 100%);
   box-shadow:0 0 0 2px #0004}
+/* Desktop nav styles */
 .site-nav a{color:#fff;text-decoration:none;font-weight:600;opacity:1;margin-left:12px}
 .site-nav a:first-child{margin-left:0}
 .site-nav a[aria-current="page"]{text-decoration:underline}
@@ -36,6 +37,7 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .gen-option input{accent-color:#5b6df8}
 .gen-option:hover{background:#151d46}
 
+/* Footer */
 .site-footer{margin-top:32px;border-top:1px solid #2a3566;background:rgba(0,0,0,.25)}
 .site-footer p{color:var(--muted);font-size:14px}
 .site-footer a{color:#ffea61}
@@ -49,6 +51,7 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .hud .hud-item{background:#0c1330;border:1px solid #2b386f;border-radius:10px;padding:6px 10px}
 .hud strong{color:#ffea61}
 
+/* Sprite frame */
 .sprite-frame{position:relative;width:min(90vw,360px);height:min(90vw,360px);border-radius:12px;overflow:hidden;margin:12px auto 16px;background:
   linear-gradient(45deg,#1c2252 25%,#27306a 25% 50%,#1c2252 50% 75%,#27306a 75%);
   background-size:32px 32px;border:2px solid #3b4cca}
@@ -61,6 +64,7 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .sprite-frame.loading .sprite-skeleton{opacity:1}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
+/* Guessing input */
 .guess-form{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .input-wrap{position:relative;flex:1;min-width:220px}
 #guess-input{width:100%;padding:12px 36px 12px 40px;border-radius:12px;border:1px solid #34407f;background:#0c1330;color:var(--text);outline:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
@@ -75,6 +79,7 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .suggestion-item:hover,.suggestion-item[aria-selected="true"],.suggestion-item.active{background:#151d46}
 .suggestions .no-results{color:#9aa3e0;padding:8px 10px}
 
+/* Buttons */
 .controls{display:flex;gap:10px;flex-wrap:wrap}
 .btn{padding:10px 14px;border-radius:12px;border:1px solid #2b386f;background:#151d46;color:#fff;cursor:pointer;font-weight:600;transition:transform .06s ease, filter .2s ease, background .2s}
 .btn:hover{filter:brightness(1.1)}
@@ -151,6 +156,18 @@ max-height:240px;overflow:auto;line-height:1.5;font-weight:700;z-index:1}
 /* Layout: make footer stick to bottom on short pages */
 main{flex:1 0 auto}
 
+/* Header responsive: mobile collapsible menu */
+.menu-toggle{display:none;background:transparent;border:0;color:#fff;font-size:26px;line-height:1;padding:8px;border-radius:8px}
+.menu-toggle:focus{outline:2px solid #ffea61;outline-offset:2px}
+.mobile-menu{display:flex;align-items:center;gap:16px}
+@media (max-width: 768px){
+  .menu-toggle{display:inline-flex;align-items:center;justify-content:center}
+  .mobile-menu{position:absolute;left:0;right:0;top:100%;background:linear-gradient(180deg,#0e1740,#0c1330);border-bottom:1px solid #27306a;box-shadow:0 10px 22px rgba(0,0,0,.35);display:none;flex-direction:column;align-items:stretch;padding:10px 16px}
+  body.mobile-open .mobile-menu{display:flex}
+  .site-nav{display:flex;flex-direction:column;gap:8px}
+  .site-nav a{margin:0;padding:10px 4px;border-radius:8px}
+  .lang-switcher{justify-content:space-between;flex-wrap:wrap}
+}
 
 /* --- Scream audio UI --- */
 .audio-frame{max-width:720px;margin:14px auto 16px}
