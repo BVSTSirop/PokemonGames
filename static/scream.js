@@ -7,10 +7,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLang(getLang());
   // Extend i18n keys for this page
   const extraI18N = {
-    en: { 'scream.title': 'Guess the Pokémon from its scream', 'scream.play': 'Play', 'scream.pause': 'Pause', 'scream.replay': 'Replay' },
-    es: { 'scream.title': 'Adivina el Pokémon por su grito', 'scream.play': 'Reproducir', 'scream.pause': 'Pausar', 'scream.replay': 'Repetir' },
-    fr: { 'scream.title': 'Devinez le Pokémon à partir de son cri', 'scream.play': 'Lire', 'scream.pause': 'Pause', 'scream.replay': 'Rejouer' },
-    de: { 'scream.title': 'Errate das Pokémon anhand seines Schreis', 'scream.play': 'Abspielen', 'scream.pause': 'Pause', 'scream.replay': 'Erneut' },
+    en: { 'scream.title': 'Guess the Pokémon!', 'scream.play': 'Play', 'scream.pause': 'Pause', 'scream.replay': 'Replay' },
+    es: { 'scream.title': 'Adivina el Pokémon!', 'scream.play': 'Reproducir', 'scream.pause': 'Pausar', 'scream.replay': 'Repetir' },
+    fr: { 'scream.title': 'Devinez le Pokémon!', 'scream.play': 'Lire', 'scream.pause': 'Pause', 'scream.replay': 'Rejouer' },
+    de: { 'scream.title': 'Errate das Pokémon!', 'scream.play': 'Abspielen', 'scream.pause': 'Pause', 'scream.replay': 'Erneut' },
   };
   try {
     Object.keys(extraI18N).forEach(l => { Object.assign(I18N[l] = I18N[l] || {}, extraI18N[l]); });

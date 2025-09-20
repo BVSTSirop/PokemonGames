@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
 <section class="game card" data-game="daily">
-  <h2 class="game-title">Daily Pokédle</h2>
-  <p>Guess today’s Pokémon! Unlimited attempts until you get it.</p>
+  <h2 class="game-title" data-i18n="daily.title">Daily Pokédle</h2>
+  <p data-i18n="daily.prompt">Guess today’s Pokémon! Unlimited attempts until you get it.</p>
 
   <form id="daily-form" class="guess-form" autocomplete="off">
-    <label class="visually-hidden" for="guess-input">Your guess</label>
+    <label class="visually-hidden" for="guess-input" data-i18n="form.label">Your guess</label>
     <div class="input-wrap">
-      <input id="guess-input" name="guess" placeholder="Type a Pokémon name..." autocomplete="off" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
+      <input id="guess-input" name="guess" placeholder="Type a Pokémon name..." data-i18n="form.placeholder" data-i18n-attr="placeholder" autocomplete="off" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
       <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions"></div>
+      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions" data-i18n="aria.suggestions" data-i18n-attr="aria-label"></div>
     </div>
-    <button class="btn btn-primary" type="submit">Guess</button>
+    <button class="btn btn-primary" type="submit" data-i18n="form.guessBtn">Guess</button>
   </form>
 
   <div id="status" class="feedback" role="status" aria-live="polite"></div>
@@ -20,14 +20,14 @@
     <table class="daily-table">
       <thead>
         <tr>
-          <th>Pokémon</th>
-          <th>Type 1</th>
-          <th>Type 2</th>
-          <th>Gen</th>
-          <th>Evolution</th>
-          <th>Height</th>
-          <th>Weight</th>
-          <th>Color</th>
+          <th data-i18n="daily.th.name">Pokémon</th>
+          <th data-i18n="daily.th.type1">Type 1</th>
+          <th data-i18n="daily.th.type2">Type 2</th>
+          <th data-i18n="daily.th.gen">Gen</th>
+          <th data-i18n="daily.th.evo">Evolution</th>
+          <th data-i18n="daily.th.height">Height</th>
+          <th data-i18n="daily.th.weight">Weight</th>
+          <th data-i18n="daily.th.color">Color</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>
@@ -35,7 +35,7 @@
   </div>
 
   <div class="controls">
-    <button class="btn" id="reset-btn" type="button">Reset</button>
+    <button class="btn" id="reset-btn" type="button" data-i18n="daily.reset">Reset</button>
   </div>
 </section>
 <script src="/static/daily.js" defer></script>

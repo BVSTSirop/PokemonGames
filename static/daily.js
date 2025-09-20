@@ -3,12 +3,105 @@
 // Reuse basic i18n and name suggestion approach from game.js, simplified
 const I18N_DAILY = {
   en: {
-    title: "Daily Pokédle",
-    prompt: "Guess today’s Pokémon! Unlimited attempts until you get it.",
-    guessBtn: "Guess",
-    reset: "Reset",
-    won: (name) => `Congrats! It was ${name}. Come back tomorrow!`,
-    lost: (name) => `Keep trying! You'll get it.`
+    'daily.title': 'Daily Pokédle',
+    'daily.prompt': 'Guess today’s Pokémon! Unlimited attempts until you get it.',
+    'daily.reset': 'Reset',
+    'daily.th.name': 'Pokémon',
+    'daily.th.type1': 'Type 1',
+    'daily.th.type2': 'Type 2',
+    'daily.th.gen': 'Gen',
+    'daily.th.evo': 'Evolution',
+    'daily.th.height': 'Height',
+    'daily.th.weight': 'Weight',
+    'daily.th.color': 'Color',
+    'daily.arrow.higher': 'Correct is higher',
+    'daily.arrow.lower': 'Correct is lower',
+    'daily.none': '-',
+    'daily.units.m': 'm',
+    'daily.units.kg': 'kg',
+    'daily.status.error': 'Error',
+    'daily.status.already': 'You already guessed that Pokémon today.',
+    'daily.status.tomorrow': 'Come back tomorrow for a new Pokémon!',
+    'daily.status.won': 'Congrats! It was {name}. Come back tomorrow!',
+    // Reuse shared form keys for consistency
+    'form.label': 'Your guess',
+    'form.placeholder': 'Type a Pokémon name...',
+    'form.guessBtn': 'Guess',
+  },
+  es: {
+    'daily.title': 'Pokédle diario',
+    'daily.prompt': '¡Adivina el Pokémon de hoy! Intentos ilimitados hasta acertar.',
+    'daily.reset': 'Reiniciar',
+    'daily.th.name': 'Pokémon',
+    'daily.th.type1': 'Tipo 1',
+    'daily.th.type2': 'Tipo 2',
+    'daily.th.gen': 'Gen',
+    'daily.th.evo': 'Evolución',
+    'daily.th.height': 'Altura',
+    'daily.th.weight': 'Peso',
+    'daily.th.color': 'Color',
+    'daily.arrow.higher': 'El correcto es mayor',
+    'daily.arrow.lower': 'El correcto es menor',
+    'daily.none': '-',
+    'daily.units.m': 'm',
+    'daily.units.kg': 'kg',
+    'daily.status.error': 'Error',
+    'daily.status.already': 'Ya adivinaste ese Pokémon hoy.',
+    'daily.status.tomorrow': '¡Vuelve mañana por un nuevo Pokémon!',
+    'daily.status.won': '¡Felicidades! Era {name}. ¡Vuelve mañana!',
+    'form.label': 'Tu respuesta',
+    'form.placeholder': 'Escribe un nombre de Pokémon...',
+    'form.guessBtn': 'Adivinar',
+  },
+  fr: {
+    'daily.title': 'Pokédle du jour',
+    'daily.prompt': 'Devinez le Pokémon du jour ! Tentatives illimitées jusqu’à réussir.',
+    'daily.reset': 'Réinitialiser',
+    'daily.th.name': 'Pokémon',
+    'daily.th.type1': 'Type 1',
+    'daily.th.type2': 'Type 2',
+    'daily.th.gen': 'Gen',
+    'daily.th.evo': 'Évolution',
+    'daily.th.height': 'Taille',
+    'daily.th.weight': 'Poids',
+    'daily.th.color': 'Couleur',
+    'daily.arrow.higher': 'La bonne réponse est plus grande',
+    'daily.arrow.lower': 'La bonne réponse est plus petite',
+    'daily.none': '-',
+    'daily.units.m': 'm',
+    'daily.units.kg': 'kg',
+    'daily.status.error': 'Erreur',
+    'daily.status.already': 'Vous avez déjà proposé ce Pokémon aujourd’hui.',
+    'daily.status.tomorrow': 'Revenez demain pour un nouveau Pokémon !',
+    'daily.status.won': 'Bravo ! C’était {name}. Revenez demain !',
+    'form.label': 'Votre réponse',
+    'form.placeholder': 'Saisissez un nom de Pokémon…',
+    'form.guessBtn': 'Deviner',
+  },
+  de: {
+    'daily.title': 'Tägliches Pokédle',
+    'daily.prompt': 'Errate das heutige Pokémon! Unbegrenzt viele Versuche bis zum Treffer.',
+    'daily.reset': 'Zurücksetzen',
+    'daily.th.name': 'Pokémon',
+    'daily.th.type1': 'Typ 1',
+    'daily.th.type2': 'Typ 2',
+    'daily.th.gen': 'Gen',
+    'daily.th.evo': 'Entwicklung',
+    'daily.th.height': 'Größe',
+    'daily.th.weight': 'Gewicht',
+    'daily.th.color': 'Farbe',
+    'daily.arrow.higher': 'Die richtige ist höher',
+    'daily.arrow.lower': 'Die richtige ist niedriger',
+    'daily.none': '-',
+    'daily.units.m': 'm',
+    'daily.units.kg': 'kg',
+    'daily.status.error': 'Fehler',
+    'daily.status.already': 'Diesen Pokémon-Namen hast du heute schon geraten.',
+    'daily.status.tomorrow': 'Komm morgen für ein neues Pokémon wieder!',
+    'daily.status.won': 'Glückwunsch! Es war {name}. Komm morgen wieder!',
+    'form.label': 'Dein Tipp',
+    'form.placeholder': 'Gib einen Pokémon-Namen ein…',
+    'form.guessBtn': 'Raten',
   }
 };
 
@@ -135,14 +228,15 @@ function renderRow(guess){
     return c;
   };
   const arrowFor = (status)=>{
-    if (status==='lower') return '<span title="Correct is higher" aria-label="Correct is higher">▲</span>';
-    if (status==='higher') return '<span title="Correct is lower" aria-label="Correct is lower">▼</span>';
+    if (status==='lower') return `<span title="${(window.t?window.t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(window.t?window.t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
+    if (status==='higher') return `<span title="${(window.t?window.t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(window.t?window.t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
     return '';
   };
   tr.appendChild(td(guess.name));
   const types = guess.types.value || [];
-  const type1 = types[0] || 'None';
-  const type2 = types[1] || 'None';
+  const none = (window.t?window.t('daily.none'):'-');
+  const type1 = types[0] || none;
+  const type2 = types[1] || none;
   let tStatuses = Array.isArray(guess.types.status) ? guess.types.status.slice(0,2) : [guess.types.status, guess.types.status];
   if (isAnswerRow) {
     tStatuses = ['correct','correct'];
@@ -166,12 +260,20 @@ function renderRow(guess){
     tr.appendChild(td(evoCell, evoStageStatus));
   } else {
     // Fallback to legacy categorical labels
-    const evoMap = { same: 'Same', pre: 'Pre-evo', post: 'Later evo', 'same-family': 'Same family', unrelated: 'Unrelated' };
+    const evoMap = {
+      same: (window.t?window.t('daily.evo.same'):'Same'),
+      pre: (window.t?window.t('daily.evo.pre'):'Pre-evo'),
+      post: (window.t?window.t('daily.evo.post'):'Later evo'),
+      'same-family': (window.t?window.t('daily.evo.sameFamily'):'Same family'),
+      unrelated: (window.t?window.t('daily.evo.unrelated'):'Unrelated')
+    };
     const evVal = isAnswerRow ? 'same' : (guess.evolution.value || 'unrelated');
     tr.appendChild(td(evoMap[evVal]||evVal, evVal==='same'?'correct':(evVal==='unrelated'?'incorrect':'partial')));
   }
-  const hTxtBase = typeof guess.height.value==='number' ? `${(guess.height.value/10).toFixed(1)} m` : '?';
-  const wTxtBase = typeof guess.weight.value==='number' ? `${(guess.weight.value/10).toFixed(1)} kg` : '?';
+  const mUnit = (window.t?window.t('daily.units.m'):'m');
+  const kgUnit = (window.t?window.t('daily.units.kg'):'kg');
+  const hTxtBase = typeof guess.height.value==='number' ? `${(guess.height.value/10).toFixed(1)} ${mUnit}` : '?';
+  const wTxtBase = typeof guess.weight.value==='number' ? `${(guess.weight.value/10).toFixed(1)} ${kgUnit}` : '?';
   const hStatus = isAnswerRow ? 'same' : guess.height.status;
   const wStatus = isAnswerRow ? 'same' : guess.weight.status;
   const hTxt = `${arrowFor(hStatus)} ${hTxtBase}`.trim();
@@ -189,8 +291,8 @@ async function submitGuess(text){
     body: JSON.stringify({ guess: text, lang: getLang() })
   });
   if (!res.ok){
-    const j = await res.json().catch(()=>({error:'Error'}));
-    statusText(j.error||'Error', 'incorrect');
+    const j = await res.json().catch(()=>({error:(window.t?window.t('daily.status.error'):'Error')}));
+    statusText(j.error || (window.t?window.t('daily.status.error'):'Error'), 'incorrect');
     return null;
   }
   return await res.json();
@@ -201,11 +303,22 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
   // Initialize language and UI
   setLang(getLang());
+  // Merge Daily page translations into global I18N if available (from game.js)
+  try {
+    if (typeof window.I18N !== 'undefined') {
+      Object.keys(I18N_DAILY).forEach(l => { Object.assign(I18N[l] = I18N[l] || {}, I18N_DAILY[l]); });
+    }
+  } catch (_) {}
+  // Apply translations to the page
+  try { if (typeof window.translatePage === 'function') translatePage(); } catch(_) {}
+
   const langSel = document.getElementById('lang-select');
   if (langSel) {
     langSel.value = getLang();
     langSel.addEventListener('change', async () => {
       setLang(langSel.value);
+      // Re-apply translations on language change
+      try { if (typeof window.translatePage === 'function') translatePage(); } catch(_) {}
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
     });
@@ -220,7 +333,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   CURRENT_DAY = day;
   for (const row of day.rows){ renderRow(row); }
   if (day.done && day.win){
-    statusText(`Congrats! It was ${day.answer}. Come back tomorrow!`, 'correct');
+    const msg = (window.t?window.t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
+    statusText(msg, 'correct');
   }
 
   const inputEl = document.getElementById('guess-input');
@@ -241,11 +355,11 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     e.preventDefault();
     const text = inputEl.value.trim();
     if (!text) return;
-    if (day.done){ statusText('Come back tomorrow for a new Pokémon!', 'reveal'); return; }
+    if (day.done){ statusText((window.t?window.t('daily.status.tomorrow'):'Come back tomorrow for a new Pokémon!'), 'reveal'); return; }
     // Prevent duplicate guesses for today
     const nn = normalizeName(text);
     if (guessedTodaySet().has(nn)){
-      statusText('You already guessed that Pokémon today.', 'reveal');
+      statusText((window.t?window.t('daily.status.already'):'You already guessed that Pokémon today.'), 'reveal');
       hideSuggestions();
       return;
     }
@@ -256,7 +370,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     if (res.correct){
       day.done = true; day.win = true; day.answer = res.answer;
       CURRENT_DAY = day;
-      statusText(`Congrats! It was ${res.answer}. Come back tomorrow!`, 'correct');
+      const msg = (window.t?window.t('daily.status.won', { name: res.answer }):`Congrats! It was ${res.answer}. Come back tomorrow!`);
+      statusText(msg, 'correct');
     } else {
       // No attempts counter; keep status area empty on wrong guess
       statusText('', '');
