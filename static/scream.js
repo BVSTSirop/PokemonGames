@@ -79,6 +79,28 @@ window.addEventListener('DOMContentLoaded', async () => {
   const canvasWrap = document.getElementById('audio-visual');
   const ctx = canvas ? canvas.getContext('2d') : null;
 
+  // Resize canvas to fit its container (responsive, crisp on high-DPR screens)
+  function resizeCanvas() {
+    if (!canvas || !canvasWrap || !ctx) return;
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    const cssW = Math.max(1, Math.floor(canvasWrap.clientWidth));
+    const cssH = Math.max(1, Math.floor(canvasWrap.clientHeight));
+    // Only resize if dimensions actually changed to avoid clearing needlessly
+    const targetW = Math.max(1, Math.floor(cssW * dpr));
+    const targetH = Math.max(1, Math.floor(cssH * dpr));
+    if (canvas.width !== targetW || canvas.height !== targetH) {
+      canvas.width = targetW;
+      canvas.height = targetH;
+      // Ensure drawing coordinates are in CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      clearCanvas();
+    }
+  }
+
+  // Initial size and on resize
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
   // Ensure cross-origin audio can be analyzed
   try { audioEl.crossOrigin = 'anonymous'; } catch(_) {}
 
@@ -120,12 +142,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   function clearCanvas() {
     if (!ctx || !canvas) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const width = canvas.clientWidth || 0;
+    const height = canvas.clientHeight || 0;
+    ctx.clearRect(0, 0, width, height);
   }
 
   function draw() {
     if (!ctx || !analyser) return;
-    const { width, height } = canvas;
+    const width = canvas.clientWidth || 0;
+    const height = canvas.clientHeight || 0;
     const bufferLen = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLen);
     analyser.getByteFrequencyData(dataArray);
