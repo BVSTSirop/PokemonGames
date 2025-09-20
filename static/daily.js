@@ -4,7 +4,7 @@
 const I18N_DAILY = {
   en: {
     'daily.title': 'Daily Pokédle',
-    'daily.prompt': 'Guess today’s Pokémon! Unlimited attempts until you get it.',
+    'daily.prompt': 'Guess today’s Pokémon!',
     'daily.reset': 'Reset',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Type 1',
@@ -30,7 +30,7 @@ const I18N_DAILY = {
   },
   es: {
     'daily.title': 'Pokédle diario',
-    'daily.prompt': '¡Adivina el Pokémon de hoy! Intentos ilimitados hasta acertar.',
+    'daily.prompt': '¡Adivina el Pokémon de hoy!',
     'daily.reset': 'Reiniciar',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Tipo 1',
@@ -55,7 +55,7 @@ const I18N_DAILY = {
   },
   fr: {
     'daily.title': 'Pokédle du jour',
-    'daily.prompt': 'Devinez le Pokémon du jour ! Tentatives illimitées jusqu’à réussir.',
+    'daily.prompt': 'Devinez le Pokémon du jour!',
     'daily.reset': 'Réinitialiser',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Type 1',
@@ -80,7 +80,7 @@ const I18N_DAILY = {
   },
   de: {
     'daily.title': 'Tägliches Pokédle',
-    'daily.prompt': 'Errate das heutige Pokémon! Unbegrenzt viele Versuche bis zum Treffer.',
+    'daily.prompt': 'Errate das heutige Pokémon!',
     'daily.reset': 'Zurücksetzen',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Typ 1',
@@ -105,82 +105,12 @@ const I18N_DAILY = {
   }
 };
 
-function getLang() {
-  const saved = localStorage.getItem('lang');
-  return saved || 'en';
-}
-function setLang(lang){
-  const supported = ['en','es','fr','de'];
-  const l = supported.includes(lang) ? lang : 'en';
-  try { localStorage.setItem('lang', l); } catch(_){ }
-  try { document.documentElement.setAttribute('lang', l); } catch(_){ }
-}
 
 // Autocomplete using shared /api/all-names
 // Use the shared global cache from game.js if present to avoid redeclaration errors
 window.ALL_NAMES = window.ALL_NAMES || {};
-function normalizeName(s){
-  if (typeof s !== 'string') s = String(s||'');
-  s = s.normalize('NFKD');
-  s = s.replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  // map common locale-specific letters
-  s = s.replace(/ß/g, 'ss');
-  // remove gender symbols and any non-alphanumeric characters
-  s = s.replace(/[♂♀]/g, '');
-  s = s.replace(/[^a-z0-9]/g, '');
-  return s;
-}
-async function preloadNames(lang){
-  const l = ['en','es','fr','de'].includes(lang) ? lang : 'en';
-  if (ALL_NAMES[l]) return ALL_NAMES[l];
-  const res = await fetch(`/api/all-names?lang=${encodeURIComponent(l)}`);
-  const data = await res.json();
-  ALL_NAMES[l] = Array.isArray(data) ? data : [];
-  return ALL_NAMES[l];
-}
-function renderSuggestions(items){
-  const box = document.getElementById('suggestions');
-  box.innerHTML = '';
-  if (!items || items.length===0){ box.classList.remove('visible'); return; }
-  items.forEach((n, idx)=>{
-    const div = document.createElement('div');
-    div.className = 'suggestion-item';
-    div.setAttribute('role','option');
-    div.id = `sugg-${idx}`;
-    div.textContent = n;
-    div.addEventListener('mousedown', (e)=>{ e.preventDefault(); selectSuggestion(n); });
-    box.appendChild(div);
-  });
-  box.classList.add('visible');
-}
-function hideSuggestions(){
-  const box = document.getElementById('suggestions');
-  box.classList.remove('visible');
-  box.innerHTML = '';
-  const input = document.getElementById('guess-input');
-  if (input) input.setAttribute('aria-expanded', 'false');
-}
-function debounce(fn, delay){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), delay); }; }
-const debouncedSuggest = debounce(async (q)=>{
-  if (!q) { hideSuggestions(); return; }
-  try{
-    await preloadNames(getLang());
-    const names = ALL_NAMES[getLang()]||[];
-    const qn = normalizeName(q);
-    const guessed = guessedTodaySet();
-    const starts=[]; const contains=[];
-    for (const n of names){
-      const nn = normalizeName(n);
-      if (guessed.has(nn)) continue; // skip already guessed
-      if (nn.startsWith(qn)) starts.push(n); else if (nn.includes(qn)) contains.push(n);
-      if (starts.length>=20) break;
-    }
-    const list = starts.length<20 ? starts.concat(contains).slice(0,20) : starts.slice(0,20);
-    renderSuggestions(list);
-    document.getElementById('guess-input').setAttribute('aria-expanded', list && list.length ? 'true':'false');
-  }catch(_){ hideSuggestions(); }
-}, 250);
-function selectSuggestion(text){ const input=document.getElementById('guess-input'); input.value=text; hideSuggestions(); input.focus(); }
+// Use shared helpers from game.js (preloadNames, renderSuggestions, hideSuggestions, debouncedSuggest, selectSuggestion)
+// game.js is included via base.html before this script
 
 // Daily state stored per UTC day key
 function todayKey(){ const d = new Date(); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())).toISOString().slice(0,10); }
@@ -202,6 +132,8 @@ function guessedTodaySet(){
     return out;
   }catch(_){ return new Set(); }
 }
+// Expose exclusion set for shared suggestions so already-guessed names are skipped
+window.getExcludeNames = () => guessedTodaySet();
 
 function statusText(msg, cls){ const el = document.getElementById('status'); el.textContent = msg||''; el.className = 'feedback' + (cls?(' prominent '+cls):''); }
 
@@ -228,13 +160,13 @@ function renderRow(guess){
     return c;
   };
   const arrowFor = (status)=>{
-    if (status==='lower') return `<span title="${(window.t?window.t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(window.t?window.t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
-    if (status==='higher') return `<span title="${(window.t?window.t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(window.t?window.t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
+    if (status==='lower') return `<span title="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
+    if (status==='higher') return `<span title="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
     return '';
   };
   tr.appendChild(td(guess.name));
   const types = guess.types.value || [];
-  const none = (window.t?window.t('daily.none'):'-');
+  const none = (typeof t==='function'? t('daily.none'):'-');
   const type1 = types[0] || none;
   const type2 = types[1] || none;
   let tStatuses = Array.isArray(guess.types.status) ? guess.types.status.slice(0,2) : [guess.types.status, guess.types.status];
@@ -261,17 +193,17 @@ function renderRow(guess){
   } else {
     // Fallback to legacy categorical labels
     const evoMap = {
-      same: (window.t?window.t('daily.evo.same'):'Same'),
-      pre: (window.t?window.t('daily.evo.pre'):'Pre-evo'),
-      post: (window.t?window.t('daily.evo.post'):'Later evo'),
-      'same-family': (window.t?window.t('daily.evo.sameFamily'):'Same family'),
-      unrelated: (window.t?window.t('daily.evo.unrelated'):'Unrelated')
+      same: (typeof t==='function'? t('daily.evo.same'):'Same'),
+      pre: (typeof t==='function'? t('daily.evo.pre'):'Pre-evo'),
+      post: (typeof t==='function'? t('daily.evo.post'):'Later evo'),
+      'same-family': (typeof t==='function'? t('daily.evo.sameFamily'):'Same family'),
+      unrelated: (typeof t==='function'? t('daily.evo.unrelated'):'Unrelated')
     };
     const evVal = isAnswerRow ? 'same' : (guess.evolution.value || 'unrelated');
     tr.appendChild(td(evoMap[evVal]||evVal, evVal==='same'?'correct':(evVal==='unrelated'?'incorrect':'partial')));
   }
-  const mUnit = (window.t?window.t('daily.units.m'):'m');
-  const kgUnit = (window.t?window.t('daily.units.kg'):'kg');
+  const mUnit = (typeof t==='function'? t('daily.units.m'):'m');
+  const kgUnit = (typeof t==='function'? t('daily.units.kg'):'kg');
   const hTxtBase = typeof guess.height.value==='number' ? `${(guess.height.value/10).toFixed(1)} ${mUnit}` : '?';
   const wTxtBase = typeof guess.weight.value==='number' ? `${(guess.weight.value/10).toFixed(1)} ${kgUnit}` : '?';
   const hStatus = isAnswerRow ? 'same' : guess.height.status;
@@ -291,8 +223,8 @@ async function submitGuess(text){
     body: JSON.stringify({ guess: text, lang: getLang() })
   });
   if (!res.ok){
-    const j = await res.json().catch(()=>({error:(window.t?window.t('daily.status.error'):'Error')}));
-    statusText(j.error || (window.t?window.t('daily.status.error'):'Error'), 'incorrect');
+    const j = await res.json().catch(()=>({error:(typeof t==='function'? t('daily.status.error'):'Error')}));
+    statusText(j.error || (typeof t==='function'? t('daily.status.error'):'Error'), 'incorrect');
     return null;
   }
   return await res.json();
@@ -305,12 +237,10 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   setLang(getLang());
   // Merge Daily page translations into global I18N if available (from game.js)
   try {
-    if (typeof window.I18N !== 'undefined') {
-      Object.keys(I18N_DAILY).forEach(l => { Object.assign(I18N[l] = I18N[l] || {}, I18N_DAILY[l]); });
-    }
+    Object.keys(I18N_DAILY).forEach(l => { Object.assign(I18N[l] = I18N[l] || {}, I18N_DAILY[l]); });
   } catch (_) {}
   // Apply translations to the page
-  try { if (typeof window.translatePage === 'function') translatePage(); } catch(_) {}
+  try { if (typeof translatePage === 'function') translatePage(); } catch(_) {}
 
   const langSel = document.getElementById('lang-select');
   if (langSel) {
@@ -318,7 +248,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     langSel.addEventListener('change', async () => {
       setLang(langSel.value);
       // Re-apply translations on language change
-      try { if (typeof window.translatePage === 'function') translatePage(); } catch(_) {}
+      try { if (typeof translatePage === 'function') translatePage(); } catch(_) {}
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
     });
@@ -333,33 +263,26 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   CURRENT_DAY = day;
   for (const row of day.rows){ renderRow(row); }
   if (day.done && day.win){
-    const msg = (window.t?window.t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
+    const msg = (typeof t==='function'? t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
     statusText(msg, 'correct');
   }
 
   const inputEl = document.getElementById('guess-input');
-  inputEl.addEventListener('input', (e)=>{ debouncedSuggest(e.target.value.trim()); });
-  inputEl.addEventListener('keydown', (e)=>{
-    const box = document.getElementById('suggestions');
-    const items = Array.from(box.querySelectorAll('.suggestion-item'));
-    if (!box.classList.contains('visible') || items.length===0) return;
-    const current = items.findIndex(i=>i.classList.contains('active'));
-    if (e.key==='ArrowDown'){ e.preventDefault(); const next=current<items.length-1?current+1:0; items.forEach(i=>i.classList.remove('active')); items[next].classList.add('active'); items[next].scrollIntoView({block:'nearest'}); }
-    else if (e.key==='ArrowUp'){ e.preventDefault(); const prev=current>0?current-1:items.length-1; items.forEach(i=>i.classList.remove('active')); items[prev].classList.add('active'); items[prev].scrollIntoView({block:'nearest'}); }
-    else if (e.key==='Enter'){ if (current>=0){ e.preventDefault(); selectSuggestion(items[current].textContent); } }
-    else if (e.key==='Escape'){ hideSuggestions(); }
-  });
-  inputEl.addEventListener('blur', ()=> setTimeout(hideSuggestions, 100));
+  inputEl.addEventListener('input', (e)=>{ if (typeof debouncedSuggest==='function') debouncedSuggest(e.target.value.trim()); });
+  if (typeof handleKeyNav === 'function') {
+    inputEl.addEventListener('keydown', handleKeyNav);
+  }
+  inputEl.addEventListener('blur', ()=> setTimeout(()=>{ if (typeof hideSuggestions==='function') hideSuggestions(); }, 100));
 
   document.getElementById('daily-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const text = inputEl.value.trim();
     if (!text) return;
-    if (day.done){ statusText((window.t?window.t('daily.status.tomorrow'):'Come back tomorrow for a new Pokémon!'), 'reveal'); return; }
+    if (day.done){ statusText((typeof t==='function'? t('daily.status.tomorrow'):'Come back tomorrow for a new Pokémon!'), 'reveal'); return; }
     // Prevent duplicate guesses for today
     const nn = normalizeName(text);
     if (guessedTodaySet().has(nn)){
-      statusText((window.t?window.t('daily.status.already'):'You already guessed that Pokémon today.'), 'reveal');
+      statusText((typeof t==='function'? t('daily.status.already'):'You already guessed that Pokémon today.'), 'reveal');
       hideSuggestions();
       return;
     }
@@ -370,7 +293,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     if (res.correct){
       day.done = true; day.win = true; day.answer = res.answer;
       CURRENT_DAY = day;
-      const msg = (window.t?window.t('daily.status.won', { name: res.answer }):`Congrats! It was ${res.answer}. Come back tomorrow!`);
+      const msg = (typeof t==='function'? t('daily.status.won', { name: res.answer }):`Congrats! It was ${res.answer}. Come back tomorrow!`);
       statusText(msg, 'correct');
     } else {
       // No attempts counter; keep status area empty on wrong guess
