@@ -52,7 +52,7 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .hud strong{color:#ffea61}
 
 /* Sprite frame */
-.sprite-frame{position:relative;width:min(90vw,360px);height:min(90vw,360px);border-radius:12px;overflow:hidden;margin:12px auto 16px;background:
+.sprite-frame{position:relative;width:min(100%,360px);aspect-ratio:1/1;height:auto;border-radius:12px;overflow:hidden;margin:12px auto 16px;background:
   linear-gradient(45deg,#1c2252 25%,#27306a 25% 50%,#1c2252 50% 75%,#27306a 75%);
   background-size:32px 32px;border:2px solid #3b4cca}
 .sprite-crop{width:100%;height:100%;background-repeat:no-repeat;background-size:500% 500%;background-position:center;filter:contrast(1.05) saturate(1.05);transition:background-size .35s ease, background-position .35s ease}
