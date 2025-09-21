@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, render_template, request
 import random
 import secrets
+import re
 
 from services.pokemon import (
     SUPPORTED_LANGS,
@@ -36,11 +37,26 @@ def random_entry():
                 token = secrets.token_urlsafe(16)
                 # store canonical english slug for robust matching
                 display_name = get_localized_name(pid, lang)
+                # Mask the Pokémon's name in the entry (replace letters with underscores)
+                def mask_letters(s: str) -> str:
+                    return ''.join('_' if ch.isalpha() else ch for ch in s)
+                masked_entry = entry
+                if display_name:
+                    pattern = re.compile(re.escape(display_name), flags=re.IGNORECASE)
+                    masked_entry = pattern.sub(lambda m: mask_letters(m.group(0)), masked_entry)
+                # Also try masking the English name in case it appears in the localized entry
+                try:
+                    display_en = get_localized_name(pid, 'en')
+                except Exception:
+                    display_en = None
+                if display_en and display_en.lower() != (display_name or '').lower():
+                    pattern_en = re.compile(re.escape(display_en), flags=re.IGNORECASE)
+                    masked_entry = pattern_en.sub(lambda m: mask_letters(m.group(0)), masked_entry)
                 TOKENS[token] = {'name': display_name, 'id': pid}
                 return jsonify({
                     'token': token,
                     'name': display_name,
-                    'entry': entry,
+                    'entry': masked_entry,
                 })
         return jsonify({"error": "Could not find a Pokédex entry."}), 500
     except Exception as e:
