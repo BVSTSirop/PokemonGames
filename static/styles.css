@@ -101,7 +101,9 @@ body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Ar
 .daily-table thead th{background:linear-gradient(180deg,#0e1740,#0c1330); color:#ffea61; position:sticky; top:0; z-index:1; text-transform:uppercase; letter-spacing:.4px; font-size:12px; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:inset 0 -1px 0 rgba(0,0,0,.35)}
 .daily-table tbody tr:nth-child(even) td:not(.correct):not(.reveal):not(.incorrect){background:#0e1535}
 .daily-table tbody tr:hover td:not(.correct):not(.reveal):not(.incorrect){background:#131b43}
-.daily-table td{vertical-align:middle; font-weight:700; color:var(--text); transition:background .2s ease, color .2s ease}
+.daily-table td{vertical-align:middle; font-weight:700; color:var(--text); opacity:1; transform:none; transition:background .2s ease, color .2s ease, opacity .28s ease, transform .28s ease}
+/* Hidden state for reveal animation */
+.daily-table td.cell-hidden{opacity:0; transform:translateY(4px) scale(.98)}
 .daily-table td.correct,.daily-table td.reveal,.daily-table td.incorrect{border-right-color:rgba(0,0,0,.25); border-bottom-color:rgba(0,0,0,.25)}
 /* Capitalize readable text columns (Pokémon, Type 1, Type 2, Color) */
 .daily-table tbody td:nth-child(1),

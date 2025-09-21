@@ -140,7 +140,7 @@ function statusText(msg, cls){ const el = document.getElementById('status'); el.
 // Track current day metadata so we can correct rendering of the actual answer row
 let CURRENT_DAY = null;
 
-function renderRow(guess){
+function renderRow(guess, animate = false){
   // If this row is the actual correct answer (based on saved day meta),
   // normalize all statuses to correct/same to avoid stale data from older saves.
   const isAnswerRow = !!(CURRENT_DAY && CURRENT_DAY.done && CURRENT_DAY.win && CURRENT_DAY.answer && guess && guess.name && CURRENT_DAY.answer === guess.name);
@@ -222,6 +222,20 @@ function renderRow(guess){
   } else {
     rowsEl.appendChild(tr);
   }
+  // Animate reveal of cells left-to-right for newly added row only
+  try {
+    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (animate && !prefersReduced) {
+      const cells = Array.from(tr.querySelectorAll('td'));
+      // Initialize hidden state
+      cells.forEach(td => td.classList.add('cell-hidden'));
+      // Staggered reveal
+      cells.forEach((td, i) => {
+        setTimeout(() => td.classList.remove('cell-hidden'), 200 * i);
+      });
+    }
+  } catch(_) {}
+  return tr;
 }
 
 async function submitGuess(text){
@@ -339,7 +353,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       day.done = true; day.win = true; day.answer = res.answer;
       CURRENT_DAY = day;
     }
-    renderRow(res.guess);
+    renderRow(res.guess, true);
     day.rows.push(res.guess);
     if (res.correct){
       const msg = (typeof t==='function'? t('daily.status.won', { name: res.answer }):`Congrats! It was ${res.answer}. Come back tomorrow!`);
