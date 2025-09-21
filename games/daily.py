@@ -183,13 +183,21 @@ def _attrs_for(pid: int):
 
 
 def _ensure_name_index(lang: str):
-    """Build a fast normalized name -> id index for a language without network calls.
-    Includes English display names, API slugs, and any cached localized names in SPECIES_NAMES.
+    """Build a fast normalized name -> id index for a language.
+    Ensures localized names for that language are cached, then indexes:
+    - English display names
+    - English API slugs
+    - Localized species names for the requested language
     """
     l = (lang or 'en').lower()
     idx = NAME_INDEX.get(l)
     if idx:
         return idx
+    # Make sure localized names are available in SPECIES_NAMES for this language
+    try:
+        ensure_language_filled(l)
+    except Exception:
+        pass
     idx = {}
     lst = get_pokemon_list()
     for p in lst:
@@ -201,7 +209,7 @@ def _ensure_name_index(lang: str):
             idx[normalize_name(en_name)] = pid
         if slug:
             idx[normalize_name(slug)] = pid
-        # Add cached localized names if available (no network)
+        # Add cached localized names if available
         loc_map = SPECIES_NAMES.get(pid) or {}
         loc = loc_map.get(l)
         if loc:

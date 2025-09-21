@@ -242,6 +242,45 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   // Apply translations to the page
   try { if (typeof translatePage === 'function') translatePage(); } catch(_) {}
 
+  // Daily mode: force All Generations and disable the gen selector UI
+  try {
+    // Always store and use 'all' for daily
+    if (typeof setGen === 'function') {
+      try { setGen('all'); } catch(_) {}
+      // Override setter to ignore changes while on the daily page
+      try { window.setGen = function(){ try { localStorage.setItem('gen','all'); } catch(_) {} }; } catch(_) {}
+    } else {
+      try { localStorage.setItem('gen','all'); } catch(_) {}
+    }
+    const genSel = document.getElementById('gen-select');
+    if (genSel) {
+      try { setGenSelectValue && setGenSelectValue(genSel, 'all'); } catch(_) {}
+      genSel.setAttribute('disabled','true');
+      genSel.setAttribute('aria-disabled','true');
+    }
+    const dd = document.getElementById('gen-dropdown');
+    const toggle = document.getElementById('gen-dropdown-toggle');
+    const menu = document.getElementById('gen-dropdown-menu');
+    if (dd && toggle && menu) {
+      // Ensure UI reflects 'All Generations'
+      try { syncGenDropdownFromSelect && syncGenDropdownFromSelect(); } catch(_) {}
+      // Disable interactions
+      toggle.setAttribute('disabled','true');
+      toggle.setAttribute('aria-disabled','true');
+      toggle.title = 'All Generations';
+      // Disable checkboxes and force only 'all' checked
+      Array.from(menu.querySelectorAll('input[type="checkbox"]')).forEach(cb => {
+        cb.checked = (cb.value === 'all');
+        cb.disabled = true;
+      });
+      // Also make sure the label text says All Generations
+      const labelSpan = dd.querySelector('.gen-label');
+      if (labelSpan) labelSpan.textContent = 'All Generations';
+      // Close menu if it was opened by earlier init
+      menu.classList.remove('open');
+    }
+  } catch(_) {}
+
   const langSel = document.getElementById('lang-select');
   if (langSel) {
     langSel.value = getLang();
@@ -288,11 +327,14 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     }
     const res = await submitGuess(text);
     if (!res) return;
-    renderRow(res.guess);
-    day.rows.push(res.guess);
+    // If the guess is correct, mark the day state before rendering so the row renders as the answer
     if (res.correct){
       day.done = true; day.win = true; day.answer = res.answer;
       CURRENT_DAY = day;
+    }
+    renderRow(res.guess);
+    day.rows.push(res.guess);
+    if (res.correct){
       const msg = (typeof t==='function'? t('daily.status.won', { name: res.answer }):`Congrats! It was ${res.answer}. Come back tomorrow!`);
       statusText(msg, 'correct');
     } else {
