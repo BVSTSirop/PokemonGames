@@ -105,6 +105,35 @@ const I18N_DAILY = {
   }
 };
 
+// Localized labels for types and colors used in Daily page
+const TYPE_I18N = {
+  en: {
+    normal: 'Normal', fire: 'Fire', water: 'Water', grass: 'Grass', electric: 'Electric', ice: 'Ice', fighting: 'Fighting', poison: 'Poison', ground: 'Ground', flying: 'Flying', psychic: 'Psychic', bug: 'Bug', rock: 'Rock', ghost: 'Ghost', dragon: 'Dragon', dark: 'Dark', steel: 'Steel', fairy: 'Fairy'
+  },
+  es: {
+    normal: 'Normal', fire: 'Fuego', water: 'Agua', grass: 'Planta', electric: 'Eléctrico', ice: 'Hielo', fighting: 'Lucha', poison: 'Veneno', ground: 'Tierra', flying: 'Volador', psychic: 'Psíquico', bug: 'Bicho', rock: 'Roca', ghost: 'Fantasma', dragon: 'Dragón', dark: 'Siniestro', steel: 'Acero', fairy: 'Hada'
+  },
+  fr: {
+    normal: 'Normal', fire: 'Feu', water: 'Eau', grass: 'Plante', electric: 'Électrik', ice: 'Glace', fighting: 'Combat', poison: 'Poison', ground: 'Sol', flying: 'Vol', psychic: 'Psy', bug: 'Insecte', rock: 'Roche', ghost: 'Spectre', dragon: 'Dragon', dark: 'Ténèbres', steel: 'Acier', fairy: 'Fée'
+  },
+  de: {
+    normal: 'Normal', fire: 'Feuer', water: 'Wasser', grass: 'Pflanze', electric: 'Elektro', ice: 'Eis', fighting: 'Kampf', poison: 'Gift', ground: 'Boden', flying: 'Flug', psychic: 'Psycho', bug: 'Käfer', rock: 'Gestein', ghost: 'Geist', dragon: 'Drache', dark: 'Unlicht', steel: 'Stahl', fairy: 'Fee'
+  }
+};
+const COLOR_I18N = {
+  en: { black:'Black', blue:'Blue', brown:'Brown', gray:'Gray', green:'Green', pink:'Pink', purple:'Purple', red:'Red', white:'White', yellow:'Yellow' },
+  es: { black:'Negro', blue:'Azul', brown:'Marrón', gray:'Gris', green:'Verde', pink:'Rosa', purple:'Morado', red:'Rojo', white:'Blanco', yellow:'Amarillo' },
+  fr: { black:'Noir', blue:'Bleu', brown:'Marron', gray:'Gris', green:'Vert', pink:'Rose', purple:'Violet', red:'Rouge', white:'Blanc', yellow:'Jaune' },
+  de: { black:'Schwarz', blue:'Blau', brown:'Braun', gray:'Grau', green:'Grün', pink:'Rosa', purple:'Lila', red:'Rot', white:'Weiß', yellow:'Gelb' }
+};
+function localizeType(slug, lang = (typeof getLang==='function'? getLang() : 'en')){
+  const m = TYPE_I18N[lang] || TYPE_I18N.en;
+  return (slug && m[slug]) ? m[slug] : (slug || (typeof t==='function'? t('daily.none'):'-'));
+}
+function localizeColor(slug, lang = (typeof getLang==='function'? getLang() : 'en')){
+  const m = COLOR_I18N[lang] || COLOR_I18N.en;
+  return (slug && m[slug]) ? m[slug] : (slug || '-');
+}
 
 // Autocomplete using shared /api/all-names
 // Use the shared global cache from game.js if present to avoid redeclaration errors
@@ -172,19 +201,17 @@ async function translateAndRerenderCurrentDay(){
       const nm = map[String(day.answer_id)];
       if (nm && day.answer !== nm){ day.answer = nm; changed = true; }
     }
-    if (changed){
-      // Re-render table
-      const tbody = document.getElementById('rows');
-      if (tbody){ tbody.innerHTML = ''; for (const row of day.rows){ renderRow(row); } }
-      // Update status text if already won
-      if (day.done && day.win && day.answer){
-        const msg = (typeof t==='function'? t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
-        statusText(msg, 'correct');
-      }
-      daily[key] = day; saveDaily(daily);
-      // Update CURRENT_DAY reference
-      try { CURRENT_DAY = day; } catch(_){}
+    // Re-render table to apply localized names, types, and colors regardless of whether names changed
+    const tbody = document.getElementById('rows');
+    if (tbody){ tbody.innerHTML = ''; for (const row of day.rows){ renderRow(row); } }
+    // Update status text if already won
+    if (day.done && day.win && day.answer){
+      const msg = (typeof t==='function'? t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
+      statusText(msg, 'correct');
     }
+    daily[key] = day; saveDaily(daily);
+    // Update CURRENT_DAY reference
+    try { CURRENT_DAY = day; } catch(_){ }
   }catch(_){ }
 }
 
@@ -216,8 +243,8 @@ function renderRow(guess, animate = false){
   tr.appendChild(td(guess.name));
   const types = guess.types.value || [];
   const none = (typeof t==='function'? t('daily.none'):'-');
-  const type1 = types[0] || none;
-  const type2 = types[1] || none;
+  const type1 = types[0] ? localizeType(types[0]) : none;
+  const type2 = types[1] ? localizeType(types[1]) : none;
   let tStatuses = Array.isArray(guess.types.status) ? guess.types.status.slice(0,2) : [guess.types.status, guess.types.status];
   if (isAnswerRow) {
     tStatuses = ['correct','correct'];
@@ -266,7 +293,8 @@ function renderRow(guess, animate = false){
   tr.appendChild(td(hTxt, hStatus));
   tr.appendChild(td(wTxt, wStatus));
   const colorStatus = isAnswerRow ? 'correct' : guess.color.status;
-  tr.appendChild(td(guess.color.value||'-', colorStatus));
+  const colorText = guess.color.value ? localizeColor(guess.color.value) : '-';
+  tr.appendChild(td(colorText, colorStatus));
   const rowsEl = document.getElementById('rows');
   if (rowsEl.firstChild) {
     rowsEl.insertBefore(tr, rowsEl.firstChild);
