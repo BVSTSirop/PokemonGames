@@ -132,10 +132,61 @@ function guessedTodaySet(){
     return out;
   }catch(_){ return new Set(); }
 }
+// Also collect guessed species ids (preferred for duplicate prevention across languages)
+function guessedTodayIdSet(){
+  try{
+    const key = todayKey();
+    const daily = loadDaily();
+    const day = daily[key] || {};
+    const rows = Array.isArray(day.rows) ? day.rows : [];
+    const out = new Set();
+    for (const r of rows){ if (r && r.species_id){ out.add(Number(r.species_id)); } }
+    return out;
+  }catch(_){ return new Set(); }
+}
 // Expose exclusion set for shared suggestions so already-guessed names are skipped
 window.getExcludeNames = () => guessedTodaySet();
 
 function statusText(msg, cls){ const el = document.getElementById('status'); el.textContent = msg||''; el.className = 'feedback' + (cls?(' prominent '+cls):''); }
+
+async function translateAndRerenderCurrentDay(){
+  try{
+    const key = todayKey();
+    const daily = loadDaily();
+    const day = daily[key];
+    if (!day || !Array.isArray(day.rows) || day.rows.length === 0) return;
+    const ids = Array.from(new Set(day.rows.map(r => r && r.species_id).filter(Boolean)));
+    if (ids.length === 0) return;
+    const res = await fetch('/api/daily/translate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ids, lang: getLang() }) });
+    if (!res.ok) return;
+    const j = await res.json().catch(()=>({names:{}}));
+    const map = j.names || {};
+    let changed = false;
+    for (const r of day.rows){
+      if (r && r.species_id){
+        const nm = map[String(r.species_id)];
+        if (nm && r.name !== nm){ r.name = nm; changed = true; }
+      }
+    }
+    if (day.done && day.win && day.answer_id){
+      const nm = map[String(day.answer_id)];
+      if (nm && day.answer !== nm){ day.answer = nm; changed = true; }
+    }
+    if (changed){
+      // Re-render table
+      const tbody = document.getElementById('rows');
+      if (tbody){ tbody.innerHTML = ''; for (const row of day.rows){ renderRow(row); } }
+      // Update status text if already won
+      if (day.done && day.win && day.answer){
+        const msg = (typeof t==='function'? t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
+        statusText(msg, 'correct');
+      }
+      daily[key] = day; saveDaily(daily);
+      // Update CURRENT_DAY reference
+      try { CURRENT_DAY = day; } catch(_){}
+    }
+  }catch(_){ }
+}
 
 // Track current day metadata so we can correct rendering of the actual answer row
 let CURRENT_DAY = null;
@@ -311,6 +362,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       try { if (typeof translatePage === 'function') translatePage(); } catch(_) {}
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
+      try { await translateAndRerenderCurrentDay(); } catch(_) {}
     });
   }
 
@@ -348,9 +400,20 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     }
     const res = await submitGuess(text);
     if (!res) return;
+    // Prevent duplicate by species id across languages (post-response)
+    try{
+      const idSet = guessedTodayIdSet();
+      const gid = res && res.guess && res.guess.species_id ? Number(res.guess.species_id) : null;
+      if (gid && idSet.has(gid)){
+        statusText((typeof t==='function'? t('daily.status.already'):'You already guessed that Pokémon today.'), 'reveal');
+        inputEl.value = '';
+        hideSuggestions();
+        return;
+      }
+    }catch(_){}
     // If the guess is correct, mark the day state before rendering so the row renders as the answer
     if (res.correct){
-      day.done = true; day.win = true; day.answer = res.answer;
+      day.done = true; day.win = true; day.answer = res.answer; day.answer_id = res && res.guess ? res.guess.species_id : day.answer_id;
       CURRENT_DAY = day;
     }
     renderRow(res.guess, true);

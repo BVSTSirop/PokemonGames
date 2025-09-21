@@ -355,6 +355,7 @@ def api_guess():
 
     fb = {
         'name': guess_name,
+        'species_id': gus.get('species_id') or guess_id,
         'types': {'value': gus['types'], 'status': type_statuses},
         # Binary status; dir carries 'higher'/'lower' hint when wrong
         'generation': {'value': gus['generation'], 'status': gen_status, 'dir': gen_dir},
@@ -370,3 +371,21 @@ def api_guess():
         'guess': fb,
         'answer': answer_name if correct else None,
     })
+
+
+@bp.route('/api/daily/translate', methods=['POST'])
+def api_daily_translate():
+    data = request.get_json(silent=True) or {}
+    ids = data.get('ids') or []
+    lang = (data.get('lang') or 'en').lower()
+    try:
+        ids = [int(x) for x in ids if isinstance(x, (int, str)) and str(x).isdigit()]
+    except Exception:
+        ids = []
+    names = {}
+    for pid in ids:
+        try:
+            names[str(pid)] = get_localized_name(pid, lang)
+        except Exception:
+            pass
+    return jsonify({ 'names': names })
