@@ -1,8 +1,33 @@
 let state = { token: null, answer: null, attemptsWrong: 0, roundSolved: false, streak: 0, score: 0, roundActive: false };
 
+// Determine current game id from the DOM. Templates set data-game on the main <section>.
+function getGameId() {
+  try {
+    const el = document.querySelector('[data-game]');
+    const id = el && el.getAttribute('data-game');
+    return id ? String(id) : 'global';
+  } catch (_) {
+    return 'global';
+  }
+}
+function statsKey() {
+  return `stats:${getGameId()}`;
+}
+
 function loadStats() {
   try {
-    const raw = localStorage.getItem('stats');
+    // Prefer namespaced key
+    let raw = localStorage.getItem(statsKey());
+    // Backward compatibility: migrate from legacy 'stats' once if present and no namespaced key yet
+    if (!raw) {
+      const legacy = localStorage.getItem('stats');
+      if (legacy) {
+        try {
+          localStorage.setItem(statsKey(), legacy);
+          raw = legacy;
+        } catch (_) {}
+      }
+    }
     const s = raw ? JSON.parse(raw) : {};
     state.score = Number.isFinite(s.score) ? s.score : 0;
     state.streak = Number.isFinite(s.streak) ? s.streak : 0;
@@ -12,7 +37,7 @@ function loadStats() {
 }
 function saveStats() {
   try {
-    localStorage.setItem('stats', JSON.stringify({ score: state.score || 0, streak: state.streak || 0 }));
+    localStorage.setItem(statsKey(), JSON.stringify({ score: state.score || 0, streak: state.streak || 0 }));
   } catch (_) {}
 }
 function updateHUD() {
