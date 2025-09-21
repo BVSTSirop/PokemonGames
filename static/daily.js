@@ -236,8 +236,8 @@ function renderRow(guess, animate = false){
   };
   const arrowFor = (dir, legacyStatus)=>{
     const d = dir || legacyStatus;
-    if (d==='lower') return `<span title="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
-    if (d==='higher') return `<span title="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
+    if (d==='higher') return `<span title="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
+    if (d==='lower') return `<span title="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
     return '';
   };
   tr.appendChild(td(guess.name));
