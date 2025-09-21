@@ -151,17 +151,15 @@ function renderRow(guess){
     const c = document.createElement('td');
     c.style.padding = '8px';
     c.innerHTML = html;
-    // Map statuses to cell classes (reuse .correct/.reveal/.incorrect colors)
-    let cl = '';
-    if (status === 'correct' || status === 'same') cl = 'correct';
-    else if (status === 'partial' || status === 'higher' || status === 'lower' || status === 'same-family' || status === 'pre' || status === 'post' || status === 'unknown') cl = 'reveal';
-    else if (status) cl = 'incorrect';
+    // Binary mapping: only 'correct' (or legacy 'same') is green; everything else red
+    const cl = (status === 'correct' || status === 'same') ? 'correct' : (status ? 'incorrect' : '');
     if (cl) c.classList.add(cl);
     return c;
   };
-  const arrowFor = (status)=>{
-    if (status==='lower') return `<span title="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
-    if (status==='higher') return `<span title="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
+  const arrowFor = (dir, legacyStatus)=>{
+    const d = dir || legacyStatus;
+    if (d==='lower') return `<span title="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
+    if (d==='higher') return `<span title="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
     return '';
   };
   tr.appendChild(td(guess.name));
@@ -176,19 +174,21 @@ function renderRow(guess){
   tr.appendChild(td(type1, tStatuses[0] || 'wrong'));
   tr.appendChild(td(type2, tStatuses[1] || 'wrong'));
   const genLabel = guess.generation.value ? `Gen ${guess.generation.value}` : '?';
-  const genStatus = isAnswerRow ? 'same' : guess.generation.status;
-  const genCell = `${arrowFor(genStatus)} ${genLabel}`.trim();
+  const genStatus = isAnswerRow ? 'correct' : (guess.generation.status || 'wrong');
+  const genDir = isAnswerRow ? null : (guess.generation.dir || null);
+  const genCell = `${arrowFor(genDir, guess.generation.status)} ${genLabel}`.trim();
   tr.appendChild(td(genCell, genStatus));
   // Evolution: display only the numeric stage (1, 2, or 3) with directional arrow
   const evoStage = guess.evo_stage;
-  const evoStageStatus = isAnswerRow ? 'same' : (evoStage ? evoStage.status : 'unknown');
+  const evoStageStatus = isAnswerRow ? 'correct' : (evoStage ? (evoStage.status || 'wrong') : 'wrong');
   if (evoStage && evoStage.value) {
     const s = evoStage.value.stage;
     let evoLabel = '?';
     if (typeof s === 'number') {
       evoLabel = String(s);
     }
-    const evoCell = `${arrowFor(evoStageStatus)} ${evoLabel}`.trim();
+    const evoDir = isAnswerRow ? null : (evoStage.dir || null);
+    const evoCell = `${arrowFor(evoDir, evoStage.status)} ${evoLabel}`.trim();
     tr.appendChild(td(evoCell, evoStageStatus));
   } else {
     // Fallback to legacy categorical labels
@@ -206,15 +206,22 @@ function renderRow(guess){
   const kgUnit = (typeof t==='function'? t('daily.units.kg'):'kg');
   const hTxtBase = typeof guess.height.value==='number' ? `${(guess.height.value/10).toFixed(1)} ${mUnit}` : '?';
   const wTxtBase = typeof guess.weight.value==='number' ? `${(guess.weight.value/10).toFixed(1)} ${kgUnit}` : '?';
-  const hStatus = isAnswerRow ? 'same' : guess.height.status;
-  const wStatus = isAnswerRow ? 'same' : guess.weight.status;
-  const hTxt = `${arrowFor(hStatus)} ${hTxtBase}`.trim();
-  const wTxt = `${arrowFor(wStatus)} ${wTxtBase}`.trim();
+  const hStatus = isAnswerRow ? 'correct' : (guess.height.status || 'wrong');
+  const wStatus = isAnswerRow ? 'correct' : (guess.weight.status || 'wrong');
+  const hDir = isAnswerRow ? null : (guess.height.dir || null);
+  const wDir = isAnswerRow ? null : (guess.weight.dir || null);
+  const hTxt = `${arrowFor(hDir, guess.height.status)} ${hTxtBase}`.trim();
+  const wTxt = `${arrowFor(wDir, guess.weight.status)} ${wTxtBase}`.trim();
   tr.appendChild(td(hTxt, hStatus));
   tr.appendChild(td(wTxt, wStatus));
   const colorStatus = isAnswerRow ? 'correct' : guess.color.status;
   tr.appendChild(td(guess.color.value||'-', colorStatus));
-  document.getElementById('rows').appendChild(tr);
+  const rowsEl = document.getElementById('rows');
+  if (rowsEl.firstChild) {
+    rowsEl.insertBefore(tr, rowsEl.firstChild);
+  } else {
+    rowsEl.appendChild(tr);
+  }
 }
 
 async function submitGuess(text){

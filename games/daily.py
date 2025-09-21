@@ -268,15 +268,16 @@ def api_guess():
         else:
             type_statuses.append('correct' if a_t == g_t else 'wrong')
 
-    # Generation
-    gen_cmp = 'unknown'
+    # Generation: binary status with directional hint
+    gen_dir = None
+    gen_status = 'wrong'
     if ans['generation'] and gus['generation']:
         if ans['generation'] == gus['generation']:
-            gen_cmp = 'same'
+            gen_status = 'correct'
         elif gus['generation'] < ans['generation']:
-            gen_cmp = 'lower'
+            gen_dir = 'higher'
         else:
-            gen_cmp = 'higher'
+            gen_dir = 'lower'
 
     # Evolution relation (category)
     evo = 'unrelated'
@@ -299,37 +300,40 @@ def api_guess():
             else:
                 evo = 'same-family'
 
-    # Height/Weight comparisons (higher/lower)
-    h_cmp = 'unknown'
-    w_cmp = 'unknown'
+    # Height/Weight: binary status with directional hint
+    h_dir = None
+    w_dir = None
+    h_status = 'wrong'
+    w_status = 'wrong'
     if isinstance(gus['height'], int) and isinstance(ans['height'], int):
         if gus['height'] == ans['height']:
-            h_cmp = 'same'
+            h_status = 'correct'
         elif gus['height'] < ans['height']:
-            h_cmp = 'lower'
+            h_dir = 'higher'
         else:
-            h_cmp = 'higher'
+            h_dir = 'lower'
     if isinstance(gus['weight'], int) and isinstance(ans['weight'], int):
         if gus['weight'] == ans['weight']:
-            w_cmp = 'same'
+            w_status = 'correct'
         elif gus['weight'] < ans['weight']:
-            w_cmp = 'lower'
+            w_dir = 'higher'
         else:
-            w_cmp = 'higher'
+            w_dir = 'lower'
 
-    # Evolution stage numbers and comparison
-    evo_stage_status = 'unknown'
+    # Evolution stage numbers and comparison: binary with directional hint
+    evo_stage_dir = None
+    evo_stage_status = 'wrong'
     g_stage = gus.get('stage_num')
     a_stage = ans.get('stage_num')
     g_total = gus.get('stage_total')
     a_total = ans.get('stage_total')
     if isinstance(g_stage, int) and isinstance(a_stage, int):
         if g_stage == a_stage:
-            evo_stage_status = 'same'
+            evo_stage_status = 'correct'
         elif g_stage < a_stage:
-            evo_stage_status = 'lower'
+            evo_stage_dir = 'higher'
         else:
-            evo_stage_status = 'higher'
+            evo_stage_dir = 'lower'
 
     # Color
     color_match = (gus['color'] and ans['color'] and gus['color'] == ans['color'])
@@ -340,8 +344,10 @@ def api_guess():
     # If the species is correct, treat scalar comparisons as correct too
     # to avoid marking different form-specific height/weight as partial.
     if correct:
-        h_cmp = 'same'
-        w_cmp = 'same'
+        h_status = 'correct'
+        w_status = 'correct'
+        h_dir = None
+        w_dir = None
 
     # Localized names for display (use species id to avoid 404 on forms)
     guess_name = get_localized_name(gus.get('species_id') or guess_id, lang)
@@ -350,11 +356,12 @@ def api_guess():
     fb = {
         'name': guess_name,
         'types': {'value': gus['types'], 'status': type_statuses},
-        'generation': {'value': gus['generation'], 'status': gen_cmp},
+        # Binary status; dir carries 'higher'/'lower' hint when wrong
+        'generation': {'value': gus['generation'], 'status': gen_status, 'dir': gen_dir},
         'evolution': {'value': evo},  # kept for backward compatibility
-        'evo_stage': {'value': {'stage': g_stage, 'total': g_total}, 'status': evo_stage_status},
-        'height': {'value': gus['height'], 'status': h_cmp},
-        'weight': {'value': gus['weight'], 'status': w_cmp},
+        'evo_stage': {'value': {'stage': g_stage, 'total': g_total}, 'status': evo_stage_status, 'dir': evo_stage_dir},
+        'height': {'value': gus['height'], 'status': h_status, 'dir': h_dir},
+        'weight': {'value': gus['weight'], 'status': w_status, 'dir': w_dir},
         'color': {'value': gus['color'], 'status': 'correct' if color_match else 'wrong'},
     }
 
