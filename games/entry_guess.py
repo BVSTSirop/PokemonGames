@@ -10,7 +10,6 @@ from services.pokemon import (
     get_pokedex_entry,
     normalize_name,
     pick_random_id_for_gen,
-    resolve_guess_to_id,
 )
 
 bp = Blueprint('entry', __name__, url_prefix='/entry')
@@ -75,30 +74,20 @@ def check_guess():
     if not token or token not in TOKENS:
         return jsonify({"error": "Invalid token"}), 400
     answer = TOKENS.get(token)
-
-    # Primary: resolve guess to an id in the requested language (with fallbacks)
-    guessed_id = resolve_guess_to_id(guess, lang)
-    is_correct = (guessed_id == answer['id']) if guessed_id else False
-
-    # Fallback: string-based comparison across slug, English and localized names
-    if not is_correct:
-        guess_norm = normalize_name(guess)
-        display_loc = get_localized_name(answer['id'], lang)
-        display_loc_norm = normalize_name(display_loc)
-        # english display
-        display_en = None
-        slug = None
-        for p in get_pokemon_list():
-            if p['id'] == answer['id']:
-                display_en = p['display_en']
-                slug = p['slug']
-                break
-        display_en_norm = normalize_name(display_en) if display_en else ''
-        slug_norm = normalize_name(slug) if slug else ''
-        is_correct = guess_norm in {display_loc_norm, display_en_norm, slug_norm}
-    else:
-        display_loc = get_localized_name(answer['id'], lang)
-
+    guess_norm = normalize_name(guess)
+    # compare against localized, english display and slug-normalized name
+    display_loc = get_localized_name(answer['id'], lang)
+    display_loc_norm = normalize_name(display_loc)
+    # english display
+    display_en = None
+    for p in get_pokemon_list():
+        if p['id'] == answer['id']:
+            display_en = p['display_en']
+            slug = p['slug']
+            break
+    display_en_norm = normalize_name(display_en) if display_en else ''
+    slug_norm = normalize_name(slug) if slug else ''
+    is_correct = guess_norm in {display_loc_norm, display_en_norm, slug_norm}
     return jsonify({
         'correct': bool(is_correct),
         'name': display_loc
