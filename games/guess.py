@@ -15,6 +15,7 @@ from services.pokemon import (
     SPECIES_NAMES,
     filter_pokemon_list_by_gen,
     pick_random_id_for_gen,
+    resolve_guess_to_id,
 )
 
 bp = Blueprint('guess', __name__)
@@ -201,17 +202,27 @@ def check_guess():
     if not token or token not in TOKENS:
         return jsonify({"error": "Invalid token"}), 400
     answer = TOKENS.get(token)
-    guess_norm = normalize_name(guess)
-    slug_norm = normalize_name(answer['name'])
-    display_en = None
-    for p in get_pokemon_list():
-        if p['id'] == answer['id']:
-            display_en = p['display_en']
-            break
-    display_en_norm = normalize_name(display_en) if display_en else ''
-    localized = get_localized_name(answer['id'], lang)
-    localized_norm = normalize_name(localized)
-    is_correct = guess_norm in {slug_norm, display_en_norm, localized_norm}
+
+    # Primary: resolve guess to an id in the requested language (with fallbacks)
+    guessed_id = resolve_guess_to_id(guess, lang)
+    is_correct = (guessed_id == answer['id']) if guessed_id else False
+
+    # Fallback: string-based comparison across slug, English and localized names
+    if not is_correct:
+        guess_norm = normalize_name(guess)
+        slug_norm = normalize_name(answer['name'])
+        display_en = None
+        for p in get_pokemon_list():
+            if p['id'] == answer['id']:
+                display_en = p['display_en']
+                break
+        display_en_norm = normalize_name(display_en) if display_en else ''
+        localized = get_localized_name(answer['id'], lang)
+        localized_norm = normalize_name(localized)
+        is_correct = guess_norm in {slug_norm, display_en_norm, localized_norm}
+    else:
+        localized = get_localized_name(answer['id'], lang)
+
     return jsonify({
         'correct': bool(is_correct),
         'name': localized

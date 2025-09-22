@@ -7,11 +7,15 @@ import unicodedata
 
 import requests
 
+# Fast name index cache per language can be added later if needed
+
 # In-memory caches and executors shared across games
 POKEMON_NAMES = []  # English display names list (title-cased)
 POKEMON_LIST = []   # List of dicts: { 'id': int, 'slug': str, 'display_en': str }
 DISPLAY_TO_ID = {}  # English display name -> id
 SPECIES_NAMES = {}  # id -> { lang: localized_display }
+# Fast normalized name index per language (built from cached data only; no network)
+NAME_INDEX = {}     # lang -> { normalized_name: id }
 
 POKEAPI_BASE = 'https://pokeapi.co/api/v2'
 SUPPORTED_LANGS = {'en', 'es', 'fr', 'de'}
@@ -155,6 +159,13 @@ def get_localized_name(poke_id: int, lang: str) -> str:
                 lang_map['en'] = p['display_en']
                 break
     SPECIES_NAMES[poke_id] = {**SPECIES_NAMES.get(poke_id, {}), **lang_map}
+    # Invalidate name index for affected languages
+    try:
+        for lc in lang_map.keys():
+            if lc in SUPPORTED_LANGS:
+                NAME_INDEX.pop(lc, None)
+    except Exception:
+        pass
     return SPECIES_NAMES[poke_id].get(lang) or SPECIES_NAMES[poke_id].get('en')
 
 
@@ -218,6 +229,13 @@ def _fetch_and_cache_species(pid: int):
                 lang_map['en'] = p['display_en']
                 break
     SPECIES_NAMES[pid] = {**SPECIES_NAMES.get(pid, {}), **lang_map}
+    # Invalidate name index for affected languages
+    try:
+        for lc in lang_map.keys():
+            if lc in SUPPORTED_LANGS:
+                NAME_INDEX.pop(lc, None)
+    except Exception:
+        pass
 
 
 def warm_up_all_names():
@@ -262,6 +280,68 @@ def normalize_name(s: str) -> str:
     s = s.replace('♂', '').replace('♀', '')
     s = ''.join(ch for ch in s if ('a' <= ch <= 'z') or ('0' <= ch <= '9'))
     return s
+
+
+def _ensure_name_index(lang: str):
+    """Build a fast normalized name -> id index for a language using cached data only.
+    - Always indexes English display names and API slugs.
+    - Additionally indexes localized names for the requested language if they are already cached
+      in SPECIES_NAMES (no network requests are made here).
+    The index is memoized in NAME_INDEX per language.
+    """
+    l = (lang or 'en').lower()
+    if l not in SUPPORTED_LANGS:
+        l = 'en'
+    idx = NAME_INDEX.get(l)
+    if idx:
+        return idx
+    idx = {}
+    for p in get_pokemon_list():
+        pid = p['id']
+        en_name = p.get('display_en') or ''
+        slug = p.get('slug') or ''
+        if en_name:
+            idx[normalize_name(en_name)] = pid
+        if slug:
+            idx[normalize_name(slug)] = pid
+        # Add localized name only if already cached to avoid slow network warmups
+        loc = SPECIES_NAMES.get(pid, {}).get(l)
+        if loc:
+            idx[normalize_name(loc)] = pid
+    NAME_INDEX[l] = idx
+    return idx
+
+
+def resolve_guess_to_id(guess: str, lang: str):
+    """Resolve a user's guess string to a Pokémon id for the given language.
+    - Matches against English display names, API slugs, and localized species names.
+    - Attempts the requested language first; then falls back to English scan; as a
+      last resort tries all supported languages to be forgiving if lang wasn't sent.
+    Returns an integer id or None if not recognized.
+    """
+    try:
+        if not guess:
+            return None
+        gnorm = normalize_name(guess)
+        # Use per-language index built from cached data only (no network on guess)
+        l = (lang or 'en').lower()
+        if l not in SUPPORTED_LANGS:
+            l = 'en'
+        idx = _ensure_name_index(l)
+        pid = idx.get(gnorm)
+        if pid:
+            return pid
+        # As a forgiving fallback, try other supported languages that may already be cached
+        for other in SUPPORTED_LANGS:
+            if other == l:
+                continue
+            idx_o = _ensure_name_index(other)
+            pid = idx_o.get(gnorm)
+            if pid:
+                return pid
+        return None
+    except Exception:
+        return None
 
 
 
