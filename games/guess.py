@@ -202,17 +202,72 @@ def check_guess():
         return jsonify({"error": "Invalid token"}), 400
     answer = TOKENS.get(token)
     guess_norm = normalize_name(guess)
-    slug_norm = normalize_name(answer['name'])
+
+    # Build a robust alias set for the selected Pokémon so localized guesses
+    # across languages are accepted even under transient cache warmups.
+    aliases = set()
+
+    # Slug from PokeAPI (always available)
+    aliases.add(normalize_name(answer['name']))
+
+    # English display name
     display_en = None
     for p in get_pokemon_list():
         if p['id'] == answer['id']:
             display_en = p['display_en']
             break
-    display_en_norm = normalize_name(display_en) if display_en else ''
-    localized = get_localized_name(answer['id'], lang)
-    localized_norm = normalize_name(localized)
-    is_correct = guess_norm in {slug_norm, display_en_norm, localized_norm}
-    return jsonify({
-        'correct': bool(is_correct),
-        'name': localized
-    })
+    if display_en:
+        aliases.add(normalize_name(display_en))
+
+    # Localized name in current UI language (may fetch on-demand)
+    try:
+        localized = get_localized_name(answer['id'], lang)
+    except Exception:
+        localized = display_en or answer['name']
+    if localized:
+        aliases.add(normalize_name(localized))
+
+    # Fast path check
+    if guess_norm in aliases:
+        return jsonify({'correct': True, 'name': localized})
+
+    # If not matched, ensure current language cache and retry once
+    try:
+        ensure_language_filled(lang)
+        # Re-add current-lang name from cache
+        try:
+            localized2 = get_localized_name(answer['id'], lang)
+            aliases.add(normalize_name(localized2))
+            localized = localized2 or localized
+        except Exception:
+            pass
+    except Exception:
+        pass
+    if guess_norm in aliases:
+        return jsonify({'correct': True, 'name': localized})
+
+    # Final fallback: compare against all supported localized names deterministically
+    # This is limited to a handful of languages and only happens on edge cases.
+    for l in SUPPORTED_LANGS:
+        try:
+            nm = get_localized_name(answer['id'], l)
+            if nm:
+                nn = normalize_name(nm)
+                aliases.add(nn)
+                if guess_norm == nn:
+                    # Return name in the current UI language for consistency
+                    try:
+                        localized_final = get_localized_name(answer['id'], lang)
+                    except Exception:
+                        localized_final = nm
+                    return jsonify({'correct': True, 'name': localized_final})
+        except Exception:
+            continue
+
+    # No match — incorrect
+    # Return localized name for UI messaging (current language or fallback)
+    try:
+        localized = get_localized_name(answer['id'], lang)
+    except Exception:
+        localized = display_en or answer['name']
+    return jsonify({'correct': False, 'name': localized})
