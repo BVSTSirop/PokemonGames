@@ -233,8 +233,26 @@ def _resolve_guess_to_id(guess: str, lang: str) -> int | None:
             return p['id']
         if normalize_name(p.get('slug') or '') == gnorm:
             return p['id']
-    # As a last resort, if index is missing localized names, avoid heavy network calls here.
-    # Return None so client shows 'Unknown Pokémon name'.
+    # As a stronger fallback for localized inputs (e.g., German names like "Bluzuk"),
+    # resolve deterministically by probing localized names on-demand and caching the result.
+    try:
+        lst = get_pokemon_list()
+        for p in lst:
+            pid_try = p['id']
+            try:
+                loc = get_localized_name(pid_try, lang)
+            except Exception:
+                loc = None
+            if loc and normalize_name(loc) == gnorm:
+                # Cache in the name index for future requests
+                try:
+                    NAME_INDEX.setdefault((lang or 'en').lower(), {})[gnorm] = pid_try
+                except Exception:
+                    pass
+                return pid_try
+    except Exception:
+        pass
+    # Give up
     return None
 
 
