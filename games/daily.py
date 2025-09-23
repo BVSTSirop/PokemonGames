@@ -11,6 +11,7 @@ from services.pokemon import (
 )
 
 import requests
+import time
 
 bp = Blueprint('daily', __name__)
 
@@ -182,6 +183,38 @@ def _attrs_for(pid: int):
     return attrs
 
 
+def _attrs_for_blocking(pid: int, retries: int = 3, delay: float = 0.2):
+    """Ensure attributes for a Pokémon id are available before evaluating.
+    Retries a few times, clearing per-id caches if needed, to avoid transient
+    fetch issues causing incorrect evaluations on first attempt.
+    """
+    last_exc = None
+    for _ in range(max(1, retries)):
+        try:
+            attrs = _attrs_for(pid)
+            # Basic sanity: require species_slug to be present
+            if attrs and attrs.get('species_slug'):
+                return attrs
+        except Exception as e:
+            last_exc = e
+        # Clear simple per-id caches and retry after a short delay
+        try:
+            ATTR_CACHE.pop(pid, None)
+            POKEMON_CACHE.pop(pid, None)
+        except Exception:
+            pass
+        time.sleep(max(0.0, delay))
+    # Final attempt (may raise if something is fundamentally wrong)
+    if last_exc:
+        try:
+            # one last clear of caches
+            ATTR_CACHE.pop(pid, None)
+            POKEMON_CACHE.pop(pid, None)
+        except Exception:
+            pass
+    return _attrs_for(pid)
+
+
 def _ensure_name_index(lang: str):
     """Build a fast normalized name -> id index for a language.
     Ensures localized names for that language are cached, then indexes:
@@ -266,11 +299,19 @@ def api_guess():
 
     guess_id = _resolve_guess_to_id(guess_raw, lang)
     if not guess_id:
+        # Ensure language names are ready and retry once
+        try:
+            ensure_language_filled(lang)
+            NAME_INDEX.pop((lang or 'en').lower(), None)
+        except Exception:
+            pass
+        guess_id = _resolve_guess_to_id(guess_raw, lang)
+    if not guess_id:
         return jsonify({'error': 'Unknown Pokémon name'}), 400
 
-    # Build feedback
-    ans = _attrs_for(answer_id)
-    gus = _attrs_for(guess_id)
+    # Build feedback (block until required data is ready)
+    ans = _attrs_for_blocking(answer_id)
+    gus = _attrs_for_blocking(guess_id)
 
     # Types: evaluate per slot (primary and secondary independently)
     ans_types = ans.get('types') or []
