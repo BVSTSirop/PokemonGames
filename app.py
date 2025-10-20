@@ -12,6 +12,10 @@ from services import pokemon as services
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 
+# Ensure a stable secret key for stateless token signing/verification.
+# Prefer environment variable; fall back to a deterministic dev default.
+app.secret_key = os.environ.get('SECRET_KEY') or 'pokemon-games-dev-secret-key'
+
 # Register game blueprints (no prefixes to preserve existing routes)
 app.register_blueprint(guess_bp)
 app.register_blueprint(type_bp)

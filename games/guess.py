@@ -1,6 +1,8 @@
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request, current_app
 import random
 import secrets
+import hmac
+import hashlib
 from concurrent.futures import as_completed
 
 from services.pokemon import (
@@ -19,8 +21,41 @@ from services.pokemon import (
 
 bp = Blueprint('guess', __name__)
 
-# In-memory token store for guess game sessions
+# In-memory token store for guess game sessions (legacy, kept for backward compatibility)
 TOKENS = {}  # token -> { 'name': str, 'id': int }
+
+
+def _sign_token(poke_id: int) -> str:
+    """Create a stateless signed token that encodes the Pokémon id.
+    Format: "<id>.<hex_sha256_hmac>" where HMAC is over the ascii id using app.secret_key.
+    """
+    try:
+        key = (current_app.secret_key or '').encode('utf-8')
+    except Exception:
+        key = b''
+    msg = str(int(poke_id)).encode('ascii')
+    sig = hmac.new(key, msg, hashlib.sha256).hexdigest()
+    return f"{int(poke_id)}.{sig}"
+
+
+def _verify_token(token: str):
+    """Verify signed token and return embedded Pokémon id (int) or None if invalid."""
+    if not isinstance(token, str) or '.' not in token:
+        return None
+    pid_str, sig_hex = token.split('.', 1)
+    try:
+        pid = int(pid_str)
+    except Exception:
+        return None
+    try:
+        key = (current_app.secret_key or '').encode('utf-8')
+    except Exception:
+        key = b''
+    msg = str(pid).encode('ascii')
+    expected = hmac.new(key, msg, hashlib.sha256).hexdigest()
+    if hmac.compare_digest(expected, sig_hex):
+        return pid
+    return None
 
 
 @bp.route('/')
@@ -171,7 +206,8 @@ def random_sprite():
             pid = pick_random_id_for_gen(gen)
             sprite, name = get_sprite_for_pokemon(pid)
             if sprite:
-                token = secrets.token_urlsafe(16)
+                # Use stateless signed token; also store legacy mapping for backward compatibility
+                token = _sign_token(pid)
                 TOKENS[token] = { 'name': name, 'id': pid }
                 bg_size = '500% 500%'
                 x = random.randint(15, 85)
@@ -198,17 +234,36 @@ def check_guess():
     lang = (data.get('lang') or 'en').lower()
     if lang not in SUPPORTED_LANGS:
         lang = 'en'
-    if not token or token not in TOKENS:
+
+    # Resolve token: accept legacy in-memory tokens or stateless signed tokens
+    answer = None
+    if token and token in TOKENS:
+        answer = TOKENS.get(token)
+    else:
+        pid = _verify_token(token) if token else None
+        if pid is not None:
+            # Build an answer dict from cached list
+            display_en = None
+            slug = None
+            for p in get_pokemon_list():
+                if p['id'] == pid:
+                    display_en = p['display_en']
+                    slug = p['slug']
+                    break
+            if pid and (display_en or slug):
+                answer = {'id': pid, 'name': slug or display_en}
+    if not answer:
         return jsonify({"error": "Invalid token"}), 400
-    answer = TOKENS.get(token)
+
     guess_norm = normalize_name(guess)
 
     # Build a robust alias set for the selected Pokémon so localized guesses
     # across languages are accepted even under transient cache warmups.
     aliases = set()
 
-    # Slug from PokeAPI (always available)
-    aliases.add(normalize_name(answer['name']))
+    # Slug from PokeAPI (always available or reconstructed)
+    if answer.get('name'):
+        aliases.add(normalize_name(answer['name']))
 
     # English display name
     display_en = None
@@ -223,7 +278,7 @@ def check_guess():
     try:
         localized = get_localized_name(answer['id'], lang)
     except Exception:
-        localized = display_en or answer['name']
+        localized = display_en or answer.get('name')
     if localized:
         aliases.add(normalize_name(localized))
 
@@ -269,5 +324,5 @@ def check_guess():
     try:
         localized = get_localized_name(answer['id'], lang)
     except Exception:
-        localized = display_en or answer['name']
+        localized = display_en or answer.get('name')
     return jsonify({'correct': False, 'name': localized})
