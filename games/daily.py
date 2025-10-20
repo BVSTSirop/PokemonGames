@@ -159,8 +159,8 @@ def _attrs_for(pid: int):
             stage_map[sp] = idx
             path_len_map[sp] = len(path)
             family_set.add(sp)
-    # Own species slug
-    own_slug = pj.get('species', {}).get('name') or pj.get('name')
+    # Own species slug: derive from species JSON directly to avoid transient missing fields in pokemon JSON
+    own_slug = sj.get('name') or (pj.get('species', {}).get('name') or pj.get('name'))
     # Determine this species' stage (1-based) and total stages in its path
     own_stage_idx0 = stage_map.get(own_slug)
     own_stage_num = (own_stage_idx0 + 1) if own_stage_idx0 is not None else None
@@ -201,6 +201,7 @@ def _attrs_for_blocking(pid: int, retries: int = 3, delay: float = 0.2):
         try:
             ATTR_CACHE.pop(pid, None)
             POKEMON_CACHE.pop(pid, None)
+            SPECIES_CACHE.pop(pid, None)
         except Exception:
             pass
         time.sleep(max(0.0, delay))

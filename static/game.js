@@ -215,7 +215,11 @@ const I18N = {
     'feedback.reveal': 'It was {name}',
     'feedback.wrong': 'Nope, try again!',
     'hud.score': 'Score',
-    'hud.streak': 'Streak'
+    'hud.streak': 'Streak',
+    'hints.title': 'Hints',
+    'hints.first': 'Starts with {letter}',
+    'hints.second': 'Ends with {letter}',
+    'hints.length': 'Name length: {n}'
   },
   es: {
     'nav.guess': 'Sprite',
@@ -233,7 +237,11 @@ const I18N = {
     'feedback.reveal': 'Era {name}',
     'feedback.wrong': '¡No! Intenta de nuevo.',
     'hud.score': 'Puntuación',
-    'hud.streak': 'Racha'
+    'hud.streak': 'Racha',
+    'hints.title': 'Pistas',
+    'hints.first': 'Empieza con {letter}',
+    'hints.second': 'Termina con {letter}',
+    'hints.length': 'Longitud del nombre: {n}'
   },
   fr: {
     'nav.guess': 'Sprite',
@@ -251,7 +259,11 @@ const I18N = {
     'feedback.reveal': 'C’était {name}',
     'feedback.wrong': 'Non, réessayez !',
     'hud.score': 'Score',
-    'hud.streak': 'Série'
+    'hud.streak': 'Série',
+    'hints.title': 'Indices',
+    'hints.first': 'Commence par {letter}',
+    'hints.second': 'Se termine par {letter}',
+    'hints.length': 'Longueur du nom : {n}'
   },
   de: {
     'nav.guess': 'Sprite',
@@ -269,7 +281,11 @@ const I18N = {
     'feedback.reveal': 'Es war {name}',
     'feedback.wrong': 'Falsch, versuche es nochmal!',
     'hud.score': 'Punkte',
-    'hud.streak': 'Serie'
+    'hud.streak': 'Serie',
+    'hints.title': 'Hinweise',
+    'hints.first': 'Beginnt mit {letter}',
+    'hints.second': 'Endet mit {letter}',
+    'hints.length': 'Namenslänge: {n}'
   }
 };
 
@@ -316,6 +332,56 @@ function translatePage() {
   }
 }
 
+// --- Hints helper ---
+function resetHints() {
+  try { state.hintLevel = 0; } catch(_) { state.hintLevel = 0; }
+  const box = document.getElementById('hints');
+  if (box) box.innerHTML = '';
+}
+function ensureHintsBox() {
+  const box = document.getElementById('hints');
+  if (!box) return null;
+  if (!box.dataset.inited) {
+    const title = document.createElement('div');
+    title.className = 'hints-title';
+    title.textContent = t('hints.title');
+    const list = document.createElement('ul');
+    list.className = 'hints-list';
+    box.appendChild(title);
+    box.appendChild(list);
+    box.dataset.inited = '1';
+  }
+  return box.querySelector('.hints-list');
+}
+function maybeRevealHints() {
+  const wrong = state.attemptsWrong || 0;
+  const name = state.answer || '';
+  if (!name) return;
+  const list = ensureHintsBox();
+  if (!list) return;
+  // First hint at 5 wrong guesses: starting letter
+  if (wrong >= 5 && (state.hintLevel||0) < 1) {
+    const first = name.trim().charAt(0) || '?';
+    const li = document.createElement('li');
+    li.textContent = t('hints.first', { letter: first });
+    list.appendChild(li);
+    state.hintLevel = 1;
+  }
+  // Second hint at 10 wrong guesses: ending letter and length
+  if (wrong >= 10 && (state.hintLevel||0) < 2) {
+    const trimmed = name.trim();
+    const last = trimmed.charAt(trimmed.length - 1) || '?';
+    const li1 = document.createElement('li');
+    li1.textContent = t('hints.second', { letter: last });
+    const li2 = document.createElement('li');
+    li2.textContent = t('hints.length', { n: String(trimmed.length) });
+    list.appendChild(li1);
+    list.appendChild(li2);
+    state.hintLevel = 2;
+  }
+
+}
+
 async function newRound() {
   // If there was an active round that wasn't solved, reset streak
   if (state.roundActive && !state.roundSolved) {
@@ -329,6 +395,8 @@ async function newRound() {
   state.roundActive = true;
   state.roundSolved = false;
   state.attemptsWrong = 0;
+  // Reset hints for new round
+  try { resetHints(); } catch(_) {}
 
   // Reset guessed list for this round if handler exists
   if (typeof window.resetGuessed === 'function') { try { window.resetGuessed(); } catch(_){} }
@@ -628,6 +696,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Feedback message for wrong guess
       fb.textContent = t('feedback.wrong');
       fb.className = 'feedback prominent incorrect';
+      // Maybe reveal textual hints after certain wrong attempts
+      try { maybeRevealHints(); } catch(_) {}
       // Note guessed name so it appears in the list and is removed from suggestions
       try { window.noteGuessed && window.noteGuessed(guess); } catch(_){}
       const el = document.getElementById('sprite-crop');

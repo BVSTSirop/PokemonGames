@@ -224,6 +224,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.roundActive = true;
     state.roundSolved = false;
     state.attemptsWrong = 0;
+    try { resetHints(); } catch(_) {}
 
     window.resetGuessed && window.resetGuessed();
 
