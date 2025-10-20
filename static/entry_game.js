@@ -68,12 +68,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function checkGuess(guess) {
-    const res = await fetch('/entry/api/check-guess', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: state.token, guess, lang: getLang() })
-    });
-    return await res.json();
+    try {
+      const res = await fetch('/entry/api/check-guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: state.token, guess, lang: getLang() })
+      });
+      let data = {};
+      try { data = await res.json(); } catch (_) { data = {}; }
+      if (!res.ok) {
+        return { error: data && data.error ? data.error : 'Request failed' };
+      }
+      return data;
+    } catch (e) {
+      return { error: 'Network error' };
+    }
   }
 
   // Bind form and controls
@@ -94,8 +103,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const guess = (document.getElementById('guess-input')?.value || '').trim();
       if (!guess) return;
-      const res = await checkGuess(guess);
       const fb = document.getElementById('feedback');
+      // Prevent early submissions before the round token is ready
+      if (!state.token) {
+        if (fb) { fb.textContent = 'Loading… please try again in a moment.'; fb.className = 'feedback prominent'; }
+        return;
+      }
+      const res = await checkGuess(guess);
+      if (res && res.error) {
+        if (fb) { fb.textContent = res.error; fb.className = 'feedback prominent'; }
+        return;
+      }
       if (res.correct) {
         if (!state.roundSolved) {
           const wrong = state.attemptsWrong || 0;
