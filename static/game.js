@@ -429,12 +429,21 @@ async function newRound() {
 }
 
 async function checkGuess(guess) {
-  const res = await fetch('/api/check-guess', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: state.token, guess, lang: getLang() })
-  });
-  return await res.json();
+  try {
+    const res = await fetch('/api/check-guess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: state.token, guess, lang: getLang() })
+    });
+    let data = {};
+    try { data = await res.json(); } catch (_) { data = {}; }
+    if (!res.ok) {
+      return { error: data && data.error ? data.error : 'Request failed' };
+    }
+    return data;
+  } catch (e) {
+    return { error: 'Network error' };
+  }
 }
 
 // Simple debounce utility
@@ -674,8 +683,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     const guess = document.getElementById('guess-input').value.trim();
     if (!guess) return;
-    const res = await checkGuess(guess);
     const fb = document.getElementById('feedback');
+    // Prevent early submissions before the round token is ready
+    if (!state.token) {
+      fb.textContent = 'Loading… please try again in a moment.';
+      fb.className = 'feedback prominent';
+      return;
+    }
+    const res = await checkGuess(guess);
+    if (res && res.error) {
+      // Surface server/network errors without penalizing the player
+      fb.textContent = res.error;
+      fb.className = 'feedback prominent';
+      return;
+    }
     if (res.correct) {
       // Award points only the first time the round is solved
       if (!state.roundSolved) {
