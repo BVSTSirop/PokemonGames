@@ -395,6 +395,11 @@ async function newRound() {
   state.roundActive = true;
   state.roundSolved = false;
   state.attemptsWrong = 0;
+  // Re-enable Guess button for a fresh round
+  try {
+    const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
+    if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
+  } catch(_) {}
   // Reset hints for new round
   try { resetHints(); } catch(_) {}
 
@@ -710,6 +715,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
       fb.textContent = t('feedback.correct', { name: res.name });
       fb.className = 'feedback prominent correct';
+      // Disable Guess button after a correct answer
+      try {
+        const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
+        if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
+      } catch(_) {}
       revealFullSprite();
     } else {
       // Increment wrong attempts and give a visual hint by zooming out

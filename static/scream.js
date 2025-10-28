@@ -226,6 +226,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.attemptsWrong = 0;
     try { resetHints(); } catch(_) {}
 
+    // Re-enable Guess button for a fresh round
+    try {
+      const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
+      if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
+    } catch(_) {}
+
     window.resetGuessed && window.resetGuessed();
 
     // Load new cry
@@ -296,8 +302,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
       fb.textContent = t('feedback.correct', { name: res.name });
       fb.className = 'feedback prominent correct';
+      // Disable Guess button after a correct answer
+      try {
+        const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
+        if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
+      } catch(_) {}
     } else {
       state.attemptsWrong = (state.attemptsWrong || 0) + 1;
+      // A wrong guess ends the current streak for this mode
+      if (state.streak !== 0) {
+        state.streak = 0;
+        saveStats();
+        updateHUD();
+      }
       fb.textContent = t('feedback.wrong');
       fb.className = 'feedback prominent incorrect';
       try { window.noteGuessed && window.noteGuessed(guess); } catch(_){ }

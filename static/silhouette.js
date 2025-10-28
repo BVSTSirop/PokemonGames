@@ -75,6 +75,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.attemptsWrong = 0;
     try { resetHints(); } catch(_) {}
 
+    // Re-enable Guess button for a fresh round
+    try {
+      const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
+      if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
+    } catch(_) {}
+
     if (typeof window.resetGuessed === 'function') { try { window.resetGuessed(); } catch(_){} }
 
     const frame = document.querySelector('.sprite-frame');
@@ -157,6 +163,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       updateHUD();
       fb.textContent = `Correct! It was ${data.name}.`;
       fb.className = 'feedback prominent correct';
+      // Disable Guess button after a correct answer
+      try {
+        const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
+        if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
+      } catch(_) {}
       // Reveal: remove silhouette filter and ensure full image is visible
       const el = document.getElementById('sprite-crop');
       el.style.filter = '';
@@ -164,8 +175,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       el.style.backgroundPosition = 'center center';
     } else {
       state.attemptsWrong = (state.attemptsWrong || 0) + 1;
+      // A wrong guess ends the current streak for this mode
+      if (state.streak !== 0) {
+        state.streak = 0;
+        saveStats();
+        updateHUD();
+      }
       window.noteGuessed && window.noteGuessed(guess);
-      fb.textContent = `Nope — not ${data.name}.`;
+      fb.textContent = `Nope — try again.`;
       fb.className = 'feedback prominent incorrect';
       try { maybeRevealHints(); } catch(_) {}
     }

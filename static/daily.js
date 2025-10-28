@@ -405,6 +405,11 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   if (day.done && day.win){
     const msg = (typeof t==='function'? t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
     statusText(msg, 'correct');
+    // Disable Guess button if today's puzzle is already solved
+    try {
+      const guessBtn = document.querySelector('#daily-form button[type="submit"], #guess-form button[type="submit"], form.guess-form button[type="submit"]');
+      if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
+    } catch(_) {}
   }
 
   const inputEl = document.getElementById('guess-input');
@@ -449,6 +454,11 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     if (res.correct){
       const msg = (typeof t==='function'? t('daily.status.won', { name: res.answer }):`Congrats! It was ${res.answer}. Come back tomorrow!`);
       statusText(msg, 'correct');
+      // Disable Guess button after today's correct answer
+      try {
+        const guessBtn = document.querySelector('#daily-form button[type="submit"], #guess-form button[type="submit"], form.guess-form button[type="submit"]');
+        if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
+      } catch(_) {}
     } else {
       // No attempts counter; keep status area empty on wrong guess
       statusText('', '');
