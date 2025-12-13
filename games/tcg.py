@@ -76,64 +76,65 @@ def _get_tcg_session():
     return s
 
 
-# Simple in-memory cache for card image URLs, keyed by English name
+# Simple in-memory cache for card image URLs, keyed by language + display name
 TCG_IMAGE_CACHE = {}
 TCG_IMAGE_TTL = 24 * 60 * 60  # 24 hours
 
 
-def _find_card_image_for_pokemon(display_en: str):
-    """Query TCGdex API for a card image for the given English display name.
-    Returns (image_url, card_id) or (None, None).
+def _find_card_image_for_pokemon(display_name, lang, display_en=None):
+    """Query TCGdex API for a card image for the given display name in the selected language.
+    Returns (image_url, card_id) or (None, None). Falls back to English if needed.
     """
-    # TCGdex v2 English endpoint; query via `name=`
-    base = 'https://api.tcgdex.net/v2/en/cards'
-    # Cache hit short-circuit
-    now = time.time()
-    cached = TCG_IMAGE_CACHE.get(display_en)
-    if cached and cached.get('exp', 0) > now:
-        _log_debug('Cache hit for display name', display_name=display_en)
-        return cached['url'], cached['id']
-
-    # TCGdex supports simple substring search by `name` param
-    params_primary = { 'name': display_en }
-    first_word = display_en.split()[0]
-    params_fallback = { 'name': first_word }
-    headers = {
-        'User-Agent': 'pokemon-games/1.0 (+https://example.local)'
-    }
     session = _get_tcg_session()
     timeout = (5, 8)  # (connect, read) seconds
-    try:
+    headers = { 'User-Agent': 'pokemon-games/1.0 (+https://example.local)' }
+
+    def _collect_candidates(card_list):
+        out = []
+        for c in card_list:
+            img = c.get('image')
+            if not img:
+                continue
+            if isinstance(img, str) and not img.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                img_url = img.rstrip('/') + '/high.png'
+            else:
+                img_url = img
+            cid = c.get('id') or c.get('localId') or None
+            out.append((img_url, cid))
+        return out
+
+    def _query_one(q_lang, name_for_lang):
+        base = f'https://api.tcgdex.net/v2/{q_lang}/cards'
+        # Cache per language+name
+        now = time.time()
+        cache_key = f"{q_lang}:{name_for_lang}"
+        cached = TCG_IMAGE_CACHE.get(cache_key)
+        if cached and cached.get('exp', 0) > now:
+            _log_debug('Cache hit for display name', lang=q_lang, display_name=name_for_lang)
+            return cached['url'], cached['id']
+
+        params_primary = { 'name': name_for_lang }
+        first_word = name_for_lang.split()[0]
+        params_fallback = { 'name': first_word }
+
+        # Primary request
         t0 = time.perf_counter()
-        _log_debug('Searching TCG cards (primary)', display_name=display_en, params=params_primary)
-        # Prepare request to capture the exact URL (including encoded params) for logging
+        _log_debug('Searching TCG cards (primary)', lang=q_lang, display_name=name_for_lang, params=params_primary)
         req_primary = requests.Request('GET', base, params=params_primary, headers=headers)
         prepped_primary = session.prepare_request(req_primary)
         _log_debug('Primary request URL', url=prepped_primary.url)
         resp = session.send(prepped_primary, timeout=timeout)
         resp.raise_for_status()
         data = resp.json() or []
-        # TCGdex returns a list of card objects
         cards = data if isinstance(data, list) else []
         _log_debug('Primary query returned cards', count=len(cards), ms=round((time.perf_counter()-t0)*1000))
-        # Filter to ones with image field
-        candidates = []
-        for c in cards:
-            img = c.get('image')
-            if not img:
-                continue
-            # Ensure we point to an actual image asset; add '/high.png' if missing extension
-            if isinstance(img, str) and not img.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                img_url = img.rstrip('/') + '/high.png'
-            else:
-                img_url = img
-            cid = c.get('id') or c.get('localId') or None
-            candidates.append((img_url, cid))
+        candidates = _collect_candidates(cards)
         _log_debug('Primary candidates filtered', candidates=len(candidates))
+
+        # Fallback by first word
         if not candidates:
-            # Try a fallback broader search (first word of the name)
             t1 = time.perf_counter()
-            _log_debug('No primary candidates, trying fallback', params=params_fallback)
+            _log_debug('No primary candidates, trying fallback', lang=q_lang, params=params_fallback)
             req_fallback = requests.Request('GET', base, params=params_fallback, headers=headers)
             prepped_fallback = session.prepare_request(req_fallback)
             _log_debug('Fallback request URL', url=prepped_fallback.url)
@@ -142,28 +143,36 @@ def _find_card_image_for_pokemon(display_en: str):
             data2 = resp2.json() or []
             cards2 = data2 if isinstance(data2, list) else []
             _log_debug('Fallback query returned cards', count=len(cards2), ms=round((time.perf_counter()-t1)*1000))
-            for c in cards2:
-                img = c.get('image')
-                if not img:
-                    continue
-                if isinstance(img, str) and not img.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
-                    img_url = img.rstrip('/') + '/high.png'
-                else:
-                    img_url = img
-                cid = c.get('id') or c.get('localId') or None
-                candidates.append((img_url, cid))
-        _log_debug('All candidates (post-fallback if any)', candidates=len(candidates))
+            candidates = _collect_candidates(cards2)
+
+        _log_debug('All candidates (post-fallback if any)', lang=q_lang, candidates=len(candidates))
         if not candidates:
-            _log_debug('No candidates found after all attempts', display_name=display_en)
             return None, None
+
         choice = random.choice(candidates)
-        _log_debug('Selected candidate', card_id=choice[1], image_url=choice[0])
-        # store in cache
-        TCG_IMAGE_CACHE[display_en] = {'url': choice[0], 'id': choice[1], 'exp': now + TCG_IMAGE_TTL}
+        _log_debug('Selected candidate', lang=q_lang, card_id=choice[1], image_url=choice[0])
+        TCG_IMAGE_CACHE[cache_key] = { 'url': choice[0], 'id': choice[1], 'exp': now + TCG_IMAGE_TTL }
         return choice
+
+    # First try the selected language
+    try:
+        res = _query_one(lang, display_name)
+        if res and res[0]:
+            return res
     except Exception as e:
-        _log_debug('Exception during TCG fetch', error=str(e), display_name=display_en)
-        return None, None
+        _log_debug('Exception during TCG fetch (selected lang)', error=str(e), lang=lang, display_name=display_name)
+
+    # Fallback to English
+    if lang != 'en':
+        try:
+            res = _query_one('en', display_en or display_name)
+            if res and res[0]:
+                return res
+        except Exception as e:
+            _log_debug('Exception during TCG fetch (fallback en)', error=str(e), display_name=display_en or display_name)
+
+    _log_debug('No candidates found after all attempts', display_name=display_name, lang=lang)
+    return None, None
 
 
 @bp.route('/tcg')
@@ -194,8 +203,10 @@ def random_tcg():
             if not display_en:
                 _log_debug('No display_en found for pid, retrying', pid=pid)
                 continue
-            _log_debug('Resolved display_en', pid=pid, display_en=display_en)
-            image_url, _card_id = _find_card_image_for_pokemon(display_en)
+            # Resolve localized name for the selected language (used for suggestions and for TCGdex query)
+            display_local = get_localized_name(pid, lang) or display_en
+            _log_debug('Resolved names', pid=pid, display_en=display_en, display_local=display_local, lang=lang)
+            image_url, _card_id = _find_card_image_for_pokemon(display_local, lang, display_en)
             if image_url:
                 token = _sign_token(pid)
                 display_name = get_localized_name(pid, lang)
