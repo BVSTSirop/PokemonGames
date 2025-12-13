@@ -9,6 +9,7 @@ from games.daily import bp as daily_bp
 from games.scream import bp as scream_bp
 from games.silhouette import bp as silhouette_bp
 from games.pixelate import bp as pixelate_bp
+from games.tcg import bp as tcg_bp
 from services import pokemon as services
 
 app = Flask(__name__)
@@ -27,6 +28,7 @@ app.register_blueprint(daily_bp)
 app.register_blueprint(scream_bp)
 app.register_blueprint(silhouette_bp)
 app.register_blueprint(pixelate_bp)
+app.register_blueprint(tcg_bp)
 
 
 # Schedule warmup once on the first incoming request (Flask 3.1 compatible)
