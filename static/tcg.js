@@ -109,8 +109,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Map wrong attempts -> blur amount (px). Index 0 is initial state (no wrong guesses yet)
-  // Increased unblur per wrong guess for a snappier reveal.
-  const BLUR_STEPS = [20, 15, 11, 8, 5, 3, 1, 0];
+  // Make unblurring faster: clear much sooner with bigger steps.
+  // After 4 wrong guesses the image is fully clear.
+  const BLUR_STEPS = [24, 16, 9, 4, 0];
   function setCardBlur(attemptsWrong = state.attemptsWrong || 0) {
     const el = document.getElementById('card-crop');
     if (!el) return;
