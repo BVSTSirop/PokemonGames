@@ -38,7 +38,8 @@
             <option value="de">Deutsch</option>
           </select>
           <div class="gen-dropdown" id="gen-dropdown" aria-label="Generation selector">
-            <button class="gen-toggle" id="gen-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false" title="Select generations">
+            <button class="gen-toggle" id="gen-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false" title="Select generations" 
+              {% if active_page=='daily' %}disabled aria-disabled="true" title="Generation selection is disabled in Daily mode"{% endif %}>
               <span class="gen-label">All Generations</span>
               <span class="gen-caret" aria-hidden="true">▾</span>
             </button>
