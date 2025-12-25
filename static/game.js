@@ -92,11 +92,11 @@ function readGenSelect(sel) {
 // ----- Nice dropdown with checkboxes for Generations -----
 function formatGenLabel(csv) {
   const g = canonicalizeGen(csv);
-  if (g === 'all') return 'All Generations';
-  const parts = g.split(',').map(n => `Gen ${n}`);
+  if (g === 'all') return t('gen.label.all');
+  const parts = g.split(',').map(n => t('gen.label.gen', { n }));
   if (parts.length <= 3) return parts.join(', ');
   const head = parts.slice(0, 3).join(', ');
-  return `${head} +${parts.length - 3} more`;
+  return `${head} ${t('gen.label.more', { n: String(parts.length - 3) })}`;
 }
 
 function syncGenDropdownFromSelect() {
@@ -202,6 +202,11 @@ const I18N = {
   en: {
     'nav.guess': 'Sprite',
         'nav.scream': 'Scream',
+    'nav.silhouette': 'Silhouette',
+    'nav.pixelate': 'Pixelate',
+    'nav.cards': 'Cards',
+    'nav.entry': 'Pokédex',
+    'nav.daily': 'Daily',
     'lang.label': 'Language',
     'game.title': 'Guess the Pokémon!',
     'form.label': 'Your guess',
@@ -209,6 +214,13 @@ const I18N = {
     'form.guessBtn': 'Guess',
     'controls.reveal': 'Reveal',
     'controls.next': 'Next',
+    'gen.label.all': 'All Generations',
+    'gen.label.gen': 'Gen {n}',
+    'gen.label.more': '+{n} more',
+    'gen.select.title': 'Select generations',
+    'gen.menu.label': 'Generations',
+    'gen.disabledHint': 'Generation selection is disabled in Daily mode',
+    'aria.menu.open': 'Open menu',
     'aria.spriteCrop': 'Cropped Pokémon sprite',
     'aria.suggestions': 'Suggestions',
     'feedback.correct': 'Correct! It is {name}',
@@ -224,13 +236,25 @@ const I18N = {
   es: {
     'nav.guess': 'Sprite',
         'nav.scream': 'Grito',
+    'nav.silhouette': 'Silueta',
+    'nav.pixelate': 'Pixelado',
+    'nav.cards': 'Cartas',
+    'nav.entry': 'Pokédex',
+    'nav.daily': 'Diario',
     'lang.label': 'Idioma',
-    'game.title': 'Adivina el Pokémon!',
+    'game.title': '¡Adivina el Pokémon!',
     'form.label': 'Tu respuesta',
     'form.placeholder': 'Escribe un nombre de Pokémon...',
     'form.guessBtn': 'Adivinar',
     'controls.reveal': 'Revelar',
     'controls.next': 'Siguiente',
+    'gen.label.all': 'Todas las generaciones',
+    'gen.label.gen': 'Gen {n}',
+    'gen.label.more': '+{n} más',
+    'gen.select.title': 'Seleccionar generaciones',
+    'gen.menu.label': 'Generaciones',
+    'gen.disabledHint': 'La selección de generaciones está deshabilitada en el modo Diario',
+    'aria.menu.open': 'Abrir menú',
     'aria.spriteCrop': 'Sprite de Pokémon recortado',
     'aria.suggestions': 'Sugerencias',
     'feedback.correct': '¡Correcto! Es {name}',
@@ -246,6 +270,11 @@ const I18N = {
   fr: {
     'nav.guess': 'Sprite',
         'nav.scream': 'Cri',
+    'nav.silhouette': 'Silhouette',
+    'nav.pixelate': 'Pixélisé',
+    'nav.cards': 'Cartes',
+    'nav.entry': 'Pokédex',
+    'nav.daily': 'Quotidien',
     'lang.label': 'Langue',
     'game.title': 'Devinez le Pokémon!',
     'form.label': 'Votre réponse',
@@ -253,6 +282,13 @@ const I18N = {
     'form.guessBtn': 'Deviner',
     'controls.reveal': 'Révéler',
     'controls.next': 'Suivant',
+    'gen.label.all': 'Toutes les générations',
+    'gen.label.gen': 'Gen {n}',
+    'gen.label.more': '+{n} de plus',
+    'gen.select.title': 'Sélectionner des générations',
+    'gen.menu.label': 'Générations',
+    'gen.disabledHint': 'La sélection des générations est désactivée en mode Quotidien',
+    'aria.menu.open': 'Ouvrir le menu',
     'aria.spriteCrop': 'Sprite de Pokémon recadré',
     'aria.suggestions': 'Suggestions',
     'feedback.correct': 'Correct ! C’est {name}',
@@ -268,6 +304,11 @@ const I18N = {
   de: {
     'nav.guess': 'Sprite',
         'nav.scream': 'Schrei',
+    'nav.silhouette': 'Silhouette',
+    'nav.pixelate': 'Verpixelt',
+    'nav.cards': 'Karten',
+    'nav.entry': 'Pokédex',
+    'nav.daily': 'Täglich',
     'lang.label': 'Sprache',
     'game.title': 'Errate das Pokémon!',
     'form.label': 'Dein Tipp',
@@ -275,6 +316,13 @@ const I18N = {
     'form.guessBtn': 'Raten',
     'controls.reveal': 'Aufdecken',
     'controls.next': 'Weiter',
+    'gen.label.all': 'Alle Generationen',
+    'gen.label.gen': 'Gen {n}',
+    'gen.label.more': '+{n} mehr',
+    'gen.select.title': 'Generationen auswählen',
+    'gen.menu.label': 'Generationen',
+    'gen.disabledHint': 'Die Generationsauswahl ist im Tagesmodus deaktiviert',
+    'aria.menu.open': 'Menü öffnen',
     'aria.spriteCrop': 'Zugeschnittener Pokémon-Sprite',
     'aria.suggestions': 'Vorschläge',
     'feedback.correct': 'Richtig! Es ist {name}',

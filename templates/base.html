@@ -18,16 +18,16 @@
         <span class="pokeball" aria-hidden="true">⚪️</span>
         <h1><span class="accent">Pokémon</span> Trivia</h1>
       </div>
-      <button class="menu-toggle" id="menu-toggle" aria-label="Open menu" aria-controls="mobile-menu" aria-expanded="false">☰</button>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Open menu" data-i18n="aria.menu.open" data-i18n-attr="aria-label" aria-controls="mobile-menu" aria-expanded="false">☰</button>
       <div class="mobile-menu" id="mobile-menu">
         <nav class="site-nav" aria-label="Primary">
           <a href="/" {% if active_page=='guess' %}aria-current="page"{% endif %} data-i18n="nav.guess">Sprite</a>
-          <a href="/silhouette" {% if active_page=='silhouette' %}aria-current="page"{% endif %}>Silhouette</a>
-          <a href="/pixelate" {% if active_page=='pixelate' %}aria-current="page"{% endif %}>Pixelate</a>
+          <a href="/silhouette" {% if active_page=='silhouette' %}aria-current="page"{% endif %} data-i18n="nav.silhouette">Silhouette</a>
+          <a href="/pixelate" {% if active_page=='pixelate' %}aria-current="page"{% endif %} data-i18n="nav.pixelate">Pixelate</a>
           <a href="/scream" {% if active_page=='scream' %}aria-current="page"{% endif %} data-i18n="nav.scream">Scream</a>
-          <a href="/tcg" {% if active_page=='tcg' %}aria-current="page"{% endif %}>Cards</a>
-          <a href="/entry" {% if active_page=='entry' %}aria-current="page"{% endif %}>Pokedex</a>
-          <a href="/daily" {% if active_page=='daily' %}aria-current="page"{% endif %}>Daily</a>
+          <a href="/tcg" {% if active_page=='tcg' %}aria-current="page"{% endif %} data-i18n="nav.cards">Cards</a>
+          <a href="/entry" {% if active_page=='entry' %}aria-current="page"{% endif %} data-i18n="nav.entry">Pokedex</a>
+          <a href="/daily" {% if active_page=='daily' %}aria-current="page"{% endif %} data-i18n="nav.daily">Daily</a>
         </nav>
         <div class="lang-switcher">
           <label for="lang-select" class="visually-hidden" data-i18n="lang.label">Language</label>
@@ -39,12 +39,12 @@
           </select>
           <div class="gen-dropdown" id="gen-dropdown" aria-label="Generation selector">
             <button class="gen-toggle" id="gen-dropdown-toggle" type="button" aria-haspopup="true" aria-expanded="false" title="Select generations" 
-              {% if active_page=='daily' %}disabled aria-disabled="true" title="Generation selection is disabled in Daily mode"{% endif %}>
-              <span class="gen-label">All Generations</span>
+              {% if active_page=='daily' %}disabled aria-disabled="true" data-i18n="gen.disabledHint" data-i18n-attr="title"{% else %}data-i18n="gen.select.title" data-i18n-attr="title"{% endif %}>
+              <span class="gen-label" data-i18n="gen.label.all">All Generations</span>
               <span class="gen-caret" aria-hidden="true">▾</span>
             </button>
-            <div class="gen-menu" id="gen-dropdown-menu" role="menu" aria-label="Generations">
-              <label class="gen-option"><input type="checkbox" value="all" checked> All Generations</label>
+            <div class="gen-menu" id="gen-dropdown-menu" role="menu" aria-label="Generations" data-i18n="gen.menu.label" data-i18n-attr="aria-label">
+              <label class="gen-option"><input type="checkbox" value="all" checked> <span data-i18n="gen.label.all">All Generations</span></label>
               <label class="gen-option"><input type="checkbox" value="1"> Gen 1</label>
               <label class="gen-option"><input type="checkbox" value="2"> Gen 2</label>
               <label class="gen-option"><input type="checkbox" value="3"> Gen 3</label>
