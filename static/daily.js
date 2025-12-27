@@ -452,11 +452,11 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       const name = state.answer || '';
       const meta = state.meta || {};
       if (level === 1){
-        if (!name) return false;
-        const first = name.trim().charAt(0) || '?';
+        // Generation first
+        if (!meta.generation) return false;
         const wrap = document.createElement('div');
-        wrap.dataset.hint = 'first';
-        wrap.textContent = t ? t('hints.first', { letter: first }) : `Starts with ${first}`;
+        wrap.dataset.hint = 'generation';
+        wrap.textContent = t ? t('hints.gen', { n: meta.generation }) : `Generation: ${meta.generation}`;
         panel.appendChild(wrap);
       } else if (level === 2){
         if (!meta.color) return false;
@@ -465,10 +465,12 @@ window.addEventListener('DOMContentLoaded', async ()=>{
         wrap.textContent = t ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`;
         panel.appendChild(wrap);
       } else if (level === 3){
-        if (!meta.generation) return false;
+        // Starts with becomes third
+        if (!name) return false;
+        const first = name.trim().charAt(0) || '?';
         const wrap = document.createElement('div');
-        wrap.dataset.hint = 'generation';
-        wrap.textContent = t ? t('hints.gen', { n: meta.generation }) : `Generation: ${meta.generation}`;
+        wrap.dataset.hint = 'first';
+        wrap.textContent = t ? t('hints.first', { letter: first }) : `Starts with ${first}`;
         panel.appendChild(wrap);
       } else if (level === 4){
         if (!meta.sprite) return false;
@@ -549,17 +551,25 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   function bindHintTimeline(){
     try{
       const tl = document.getElementById('hint-timeline');
-      if (!tl || tl.dataset.clickBound === '1') return;
+      if (!tl) { dbgDailyHints('bindHintTimeline(): timeline not found'); return; }
+      if (tl.dataset.clickBound === '1') { dbgDailyHints('bindHintTimeline(): already bound'); return; }
       tl.addEventListener('click', async (ev) => {
         const step = ev.target && (ev.target.closest ? ev.target.closest('.timeline-step') : null);
         if (!step) return;
         // If already revealed, just toggle accordion open/close
         const panel0 = step.querySelector('.accordion-content');
         if (panel0 && panel0.querySelector('[data-hint]')){
-          const open0 = !step.classList.contains('open');
+          const wasOpen = step.classList.contains('open') || step.getAttribute('aria-expanded') === 'true';
+          const open0 = !wasOpen;
           step.classList.toggle('open', open0);
           step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
           panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+          dbgDailyHints('toggle click:', {
+            level: step.getAttribute('data-level') || '?',
+            th: step.getAttribute('data-th') || '?',
+            wasOpen,
+            nowOpen: open0
+          });
           return;
         }
         const th = parseInt(step.getAttribute('data-th')||'0', 10);
@@ -595,10 +605,18 @@ window.addEventListener('DOMContentLoaded', async ()=>{
         // If already revealed, toggle open/close
         const panel0 = step.querySelector('.accordion-content');
         if (panel0 && panel0.querySelector('[data-hint]')){
-          const open0 = !step.classList.contains('open');
+          const wasOpen = step.classList.contains('open') || step.getAttribute('aria-expanded') === 'true';
+          const open0 = !wasOpen;
           step.classList.toggle('open', open0);
           step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
           panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+          dbgDailyHints('toggle keydown:', {
+            key,
+            level: step.getAttribute('data-level') || '?',
+            th: step.getAttribute('data-th') || '?',
+            wasOpen,
+            nowOpen: open0
+          });
           return;
         }
         const th = parseInt(step.getAttribute('data-th')||'0', 10);
@@ -626,8 +644,128 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       });
       tl.dataset.clickBound = '1';
       dbgDailyHints('bindHintTimeline(): bound');
+      // Fallback: also bind directly on each step in case delegation is disrupted by layout
+      try {
+        const steps = Array.from(document.querySelectorAll('#hint-timeline .timeline-step'));
+        let boundCount = 0;
+        steps.forEach(step => {
+          if (step.dataset.stepBound === '1') return;
+          step.addEventListener('click', () => {
+            const panel0 = step.querySelector('.accordion-content');
+            if (panel0 && panel0.querySelector('[data-hint]')){
+              const wasOpen = step.classList.contains('open') || step.getAttribute('aria-expanded') === 'true';
+              const open0 = !wasOpen;
+              step.classList.toggle('open', open0);
+              step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
+              panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+              dbgDailyHints('toggle direct-click:', { level: step.getAttribute('data-level') || '?', th: step.getAttribute('data-th') || '?', wasOpen, nowOpen: open0 });
+              return;
+            }
+            const th = parseInt(step.getAttribute('data-th')||'0', 10);
+            const wrongNow = state && typeof state.attemptsWrong==='number' ? state.attemptsWrong : 0;
+            dbgDailyHints('timeline direct-click:', { th, wrongNow });
+            if (wrongNow >= th){
+              (async () => {
+                try { await ensureDailyMetaLoaded(); } catch(_){}
+                const lvl = TH_TO_LEVEL[th] || 0;
+                let did = false;
+                if (lvl && typeof revealHintAt === 'function') { did = !!revealHintAt(lvl); }
+                else if (typeof maybeRevealHints === 'function') { maybeRevealHints(); did = true; }
+                dbgDailyHints('timeline direct-click reveal:', { level: lvl, did });
+                if (did) {
+                  step.classList.add('revealed');
+                  try { syncRevealedSteps(); } catch(_){ }
+                  try { updateHintTimeline(wrongNow); } catch(_){ }
+                }
+              })();
+            }
+          });
+          step.addEventListener('keydown', (ev) => {
+            const key = ev.key;
+            if (key !== 'Enter' && key !== ' ') return;
+            ev.preventDefault();
+            const panel0 = step.querySelector('.accordion-content');
+            if (panel0 && panel0.querySelector('[data-hint]')){
+              const wasOpen = step.classList.contains('open') || step.getAttribute('aria-expanded') === 'true';
+              const open0 = !wasOpen;
+              step.classList.toggle('open', open0);
+              step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
+              panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+              dbgDailyHints('toggle direct-keydown:', { key, level: step.getAttribute('data-level') || '?', th: step.getAttribute('data-th') || '?', wasOpen, nowOpen: open0 });
+              return;
+            }
+            const th = parseInt(step.getAttribute('data-th')||'0', 10);
+            const wrongNow = state && typeof state.attemptsWrong==='number' ? state.attemptsWrong : 0;
+            dbgDailyHints('timeline direct-keydown:', { key, th, wrongNow });
+            if (wrongNow >= th){
+              (async () => {
+                try { await ensureDailyMetaLoaded(); } catch(_){}
+                const lvl = TH_TO_LEVEL[th] || 0;
+                let did = false;
+                if (lvl && typeof revealHintAt === 'function') { did = !!revealHintAt(lvl); }
+                else if (typeof maybeRevealHints === 'function') { maybeRevealHints(); did = true; }
+                dbgDailyHints('timeline direct-keydown reveal:', { level: lvl, did });
+                if (did) {
+                  step.classList.add('revealed');
+                  try { syncRevealedSteps(); } catch(_){ }
+                  try { updateHintTimeline(wrongNow); } catch(_){ }
+                }
+              })();
+            }
+          });
+          step.dataset.stepBound = '1';
+          boundCount++;
+        });
+        if (boundCount) dbgDailyHints('bindHintTimeline(): also bound per-step listeners =', boundCount);
+      } catch(_){ }
     }catch(_){ }
   }
+
+  // Absolute fallback: capture-phase document listeners to ensure toggling works even if container binding fails
+  (function bindGlobalTimelineHandlersOnce(){
+    try{
+      if (window.__dailyTimelineGlobalBound) return;
+      const onDocClick = (ev) => {
+        try{
+          const step = ev.target && (ev.target.closest ? ev.target.closest('.timeline-step') : null);
+          if (!step) return;
+          const panel0 = step.querySelector('.accordion-content');
+          if (panel0 && panel0.querySelector('[data-hint]')){
+            const wasOpen = step.classList.contains('open') || step.getAttribute('aria-expanded') === 'true';
+            const open0 = !wasOpen;
+            step.classList.toggle('open', open0);
+            step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
+            panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+            dbgDailyHints('toggle doc-click:', { level: step.getAttribute('data-level') || '?', th: step.getAttribute('data-th') || '?', wasOpen, nowOpen: open0 });
+            return;
+          }
+        }catch(_){ }
+      };
+      const onDocKey = (ev) => {
+        try{
+          const key = ev.key;
+          if (key !== 'Enter' && key !== ' ') return;
+          const step = ev.target && (ev.target.closest ? ev.target.closest('.timeline-step') : null);
+          if (!step) return;
+          ev.preventDefault();
+          const panel0 = step.querySelector('.accordion-content');
+          if (panel0 && panel0.querySelector('[data-hint]')){
+            const wasOpen = step.classList.contains('open') || step.getAttribute('aria-expanded') === 'true';
+            const open0 = !wasOpen;
+            step.classList.toggle('open', open0);
+            step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
+            panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+            dbgDailyHints('toggle doc-keydown:', { key, level: step.getAttribute('data-level') || '?', th: step.getAttribute('data-th') || '?', wasOpen, nowOpen: open0 });
+            return;
+          }
+        }catch(_){ }
+      };
+      document.addEventListener('click', onDocClick, true);
+      document.addEventListener('keydown', onDocKey, true);
+      window.__dailyTimelineGlobalBound = true;
+      dbgDailyHints('global timeline handlers: bound (capture-phase)');
+    }catch(_){ }
+  })();
 
   // restore previous attempts for today
   const key = todayKey();
