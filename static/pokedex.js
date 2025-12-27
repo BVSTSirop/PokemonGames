@@ -64,6 +64,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     state.token = data.token;
     state.answer = data.name;
+
+      // Provide metadata for shared hints (sprite now available for silhouette)
+      try {
+        state.meta = Object.assign({}, state.meta, {
+          sprite: data.sprite,
+          color: data.color,
+          generation: data.generation,
+        });
+      } catch(_) {}
+
     if (txtEl) txtEl.textContent = data.entry || '';
 
     const fbEl = document.getElementById('feedback');
@@ -146,6 +156,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
         if (fb) { fb.textContent = (typeof t==='function'? t('feedback.wrong') : 'Nope, try again!'); fb.className = 'feedback prominent incorrect'; }
         try { window.noteGuessed && window.noteGuessed(guess); } catch(_){}
+        try { if (typeof maybeRevealHints === 'function') maybeRevealHints(); } catch(_) {}
       }
     });
   }

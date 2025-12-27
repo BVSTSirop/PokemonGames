@@ -13,6 +13,7 @@ from services.pokemon import (
     normalize_name,
     pick_random_id_for_gen,
     get_species_metadata,
+    get_sprite_for_pokemon,
 )
 
 bp = Blueprint('pokedex', __name__, url_prefix='/pokedex')
@@ -90,6 +91,7 @@ def random_entry():
                     masked_entry = pattern_en.sub(lambda m: mask_letters(m.group(0)), masked_entry)
                 TOKENS[token] = {'name': display_name, 'id': pid}
                 meta = get_species_metadata(pid)
+                sprite_url, _ = get_sprite_for_pokemon(pid)
                 return jsonify({
                     'token': token,
                     'id': pid,
@@ -97,6 +99,7 @@ def random_entry():
                     'entry': masked_entry,
                     'color': meta.get('color') or '',
                     'generation': meta.get('generation') or '',
+                    'sprite': sprite_url or '',
                 })
         return jsonify({"error": "Could not find a Pokédex entry."}), 500
     except Exception as e:

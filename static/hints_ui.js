@@ -165,7 +165,19 @@
       const steps = Array.from(document.querySelectorAll('#hint-timeline .timeline-step'));
       steps.forEach(step => {
         const th = parseInt(step.getAttribute('data-th')||'0',10);
-        if (wrong >= th) step.classList.add('active'); else step.classList.remove('active');
+        const lvl = parseInt(step.getAttribute('data-level')||'0',10) || 0;
+        // Only mark a step active if we both crossed the threshold and have the data to render it
+        let can = true;
+        try {
+          const meta = (typeof state!=='undefined' && state && state.meta) ? state.meta : {};
+          const name = (typeof state!=='undefined' && state && state.answer) ? state.answer : '';
+          if (lvl === 1) can = !!meta && !!meta.generation; // Generation
+          else if (lvl === 2) can = !!meta && !!meta.color; // Color
+          else if (lvl === 3) can = !!name; // Starts with
+          else if (lvl === 4) can = !!meta && !!meta.sprite; // Silhouette needs an image
+        } catch(_) { can = true; }
+        const should = (wrong >= th) && can;
+        step.classList.toggle('active', !!should);
       });
       dbg('updateTimeline wrong=', wrong);
     }catch(_){ }
