@@ -16,6 +16,7 @@ from services.pokemon import (
     filter_pokemon_list_by_gen,
     pick_random_id_for_gen,
     get_cry_for_pokemon,
+    get_species_metadata,
 )
 
 bp = Blueprint('scream', __name__)
@@ -210,10 +211,14 @@ def random_cry():
                 token = _sign_token(pid)
                 TOKENS[token] = {'name': name, 'id': pid}
                 display_name = get_localized_name(pid, lang)
+                meta = get_species_metadata(pid)
                 return jsonify({
                     'token': token,
+                    'id': pid,
                     'name': display_name,
                     'audio': audio,
+                    'color': meta.get('color') or '',
+                    'generation': meta.get('generation') or '',
                 })
         return jsonify({"error": "Could not find a cry audio."}), 500
     except Exception as e:

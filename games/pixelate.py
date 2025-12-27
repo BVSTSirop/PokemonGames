@@ -7,6 +7,7 @@ from services.pokemon import (
     get_localized_name,
     get_sprite_for_pokemon,
     pick_random_id_for_gen,
+    get_species_metadata,
 )
 
 bp = Blueprint('pixelate', __name__)
@@ -44,10 +45,14 @@ def random_pixelate():
             if sprite:
                 token = _sign_token(pid)
                 display_name = get_localized_name(pid, lang)
+                meta = get_species_metadata(pid)
                 return jsonify({
                     'token': token,
+                    'id': pid,
                     'name': display_name,
                     'sprite': sprite,
+                    'color': meta.get('color') or '',
+                    'generation': meta.get('generation') or '',
                 })
         return jsonify({"error": "Could not find a sprite."}), 500
     except Exception as e:

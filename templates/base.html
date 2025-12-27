@@ -26,7 +26,7 @@
           <a href="/pixelate" {% if active_page=='pixelate' %}aria-current="page"{% endif %} data-i18n="nav.pixelate">Pixelate</a>
           <a href="/scream" {% if active_page=='scream' %}aria-current="page"{% endif %} data-i18n="nav.scream">Scream</a>
           <a href="/tcg" {% if active_page=='tcg' %}aria-current="page"{% endif %} data-i18n="nav.cards">Cards</a>
-          <a href="/entry" {% if active_page=='entry' %}aria-current="page"{% endif %} data-i18n="nav.entry">Pokedex</a>
+          <a href="/pokedex" {% if active_page=='pokedex' %}aria-current="page"{% endif %} data-i18n="nav.pokedex">Pokedex</a>
           <a href="/daily" {% if active_page=='daily' %}aria-current="page"{% endif %} data-i18n="nav.daily">Daily</a>
         </nav>
         <div class="lang-switcher">
@@ -101,6 +101,7 @@
       window.addEventListener('resize', closeOnResize);
     })();
   </script>
+  <script src="/static/hints_ui.js" defer></script>
   <script src="/static/game.js" defer></script>
 </body>
 </html>

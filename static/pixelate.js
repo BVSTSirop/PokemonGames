@@ -157,8 +157,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     state.token = data.token;
     state.answer = data.name;
-    // Provide sprite URL for silhouette hint even if other metadata is missing
-    state.meta = Object.assign({}, state.meta, { sprite: data.sprite });
+    // Provide metadata for shared hints
+    state.meta = Object.assign({}, state.meta, {
+      sprite: data.sprite,
+      color: data.color,
+      generation: data.generation,
+    });
 
     imageObj = new Image();
     imageObj.crossOrigin = 'anonymous';

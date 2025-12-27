@@ -89,6 +89,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     state.token = data.token;
     state.answer = data.name;
+    // Provide metadata for shared hints; use card image as silhouette surrogate
+    state.meta = Object.assign({}, state.meta, {
+      sprite: data.image,
+      color: data.color,
+      generation: data.generation,
+    });
     const el = document.getElementById('card-crop');
     el.classList.remove('revealed');
     el.classList.add('no-anim');

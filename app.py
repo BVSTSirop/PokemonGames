@@ -4,7 +4,7 @@ from flask import Flask
 from games.guess import bp as guess_bp
 from games.type_matchup import bp as type_bp
 from games.quiz import bp as quiz_bp
-from games.entry_guess import bp as entry_bp
+from games.pokedex import bp as entry_bp
 from games.daily import bp as daily_bp
 from games.scream import bp as scream_bp
 from games.silhouette import bp as silhouette_bp

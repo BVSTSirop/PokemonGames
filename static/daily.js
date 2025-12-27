@@ -517,8 +517,59 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   }
   // Install global override so game.js's maybeRevealHints uses our accordion renderer
   try {
-    window.revealHintAt = revealHintAt;
-    dbgDailyHints('override installed: window.revealHintAt -> timeline accordion');
+    // If a shared HintsUI is present, delegate override installation to it
+    if (window.HintsUI && typeof HintsUI.installTimelineOverride === 'function'){
+      try {
+        HintsUI.installTimelineOverride({
+          renderers: {
+            1: () => {
+              const meta = (typeof state!=='undefined' && state && state.meta) ? state.meta : {};
+              if (!meta || !meta.generation) return null;
+              const wrap = document.createElement('div');
+              wrap.dataset.hint = 'generation';
+              wrap.textContent = (typeof t==='function') ? t('hints.gen', { n: meta.generation }) : `Generation: ${meta.generation}`;
+              return wrap;
+            },
+            2: () => {
+              const meta = (typeof state!=='undefined' && state && state.meta) ? state.meta : {};
+              if (!meta || !meta.color) return null;
+              const wrap = document.createElement('div');
+              wrap.dataset.hint = 'color';
+              wrap.textContent = (typeof t==='function') ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`;
+              return wrap;
+            },
+            3: () => {
+              const name = (typeof state!=='undefined' && state && state.answer) ? state.answer : '';
+              if (!name) return null;
+              const first = name.trim().charAt(0) || '?';
+              const wrap = document.createElement('div');
+              wrap.dataset.hint = 'first';
+              wrap.textContent = (typeof t==='function') ? t('hints.first', { letter: first }) : `Starts with ${first}`;
+              return wrap;
+            },
+            4: () => {
+              const meta = (typeof state!=='undefined' && state && state.meta) ? state.meta : {};
+              if (!meta || !meta.sprite) return null;
+              const wrap = document.createElement('div');
+              wrap.dataset.hint = 'silhouette';
+              const label = document.createElement('div');
+              label.textContent = (typeof t==='function') ? t('hints.silhouette') : 'Silhouette';
+              const thumb = document.createElement('div');
+              thumb.className = 'silhouette-thumb';
+              thumb.style.backgroundImage = `url(${meta.sprite})`;
+              thumb.setAttribute('aria-label', label.textContent);
+              wrap.appendChild(label);
+              wrap.appendChild(thumb);
+              return wrap;
+            }
+          }
+        });
+        dbgDailyHints('override installed via HintsUI');
+      } catch(_){ }
+    } else {
+      window.revealHintAt = revealHintAt;
+      dbgDailyHints('override installed: window.revealHintAt -> timeline accordion');
+    }
   } catch(_) {}
   function syncRevealedSteps(){
     try{
@@ -744,6 +795,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   // Absolute fallback: capture-phase document listeners to ensure toggling works even if container binding fails
   (function bindGlobalTimelineHandlersOnce(){
     try{
+      if (window.HintsUI) { dbgDailyHints('global timeline handlers: skipped (HintsUI present)'); return; }
       if (window.__dailyTimelineGlobalBound) return;
       const onDocClick = (ev) => {
         try{
@@ -868,13 +920,19 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     hideSuggestions();
   });
 
-  document.getElementById('reset-btn').addEventListener('click', ()=>{
-    const d = loadDaily();
-    delete d[key];
-    saveDaily(d);
-    document.getElementById('rows').innerHTML = '';
-    statusText('', '');
-  });
+  try {
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', ()=>{
+        const d = loadDaily();
+        delete d[key];
+        saveDaily(d);
+        const rowsEl = document.getElementById('rows');
+        if (rowsEl) rowsEl.innerHTML = '';
+        statusText('', '');
+      });
+    }
+  } catch(_) { }
 
   // Initialize shared hint system for Daily
   try {

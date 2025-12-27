@@ -213,7 +213,7 @@ const I18N = {
     'nav.silhouette': 'Silhouette',
     'nav.pixelate': 'Pixelate',
     'nav.cards': 'Cards',
-    'nav.entry': 'Pokédex',
+    'nav.pokedex': 'Pokédex',
     'nav.daily': 'Daily',
     'lang.label': 'Language',
     'game.title': 'Guess the Pokémon!',
@@ -252,7 +252,7 @@ const I18N = {
     'nav.silhouette': 'Silueta',
     'nav.pixelate': 'Pixelado',
     'nav.cards': 'Cartas',
-    'nav.entry': 'Pokédex',
+    'nav.pokedex': 'Pokédex',
     'nav.daily': 'Diario',
     'lang.label': 'Idioma',
     'game.title': '¡Adivina el Pokémon!',
@@ -290,7 +290,7 @@ const I18N = {
     'nav.silhouette': 'Silhouette',
     'nav.pixelate': 'Pixélisé',
     'nav.cards': 'Cartes',
-    'nav.entry': 'Pokédex',
+    'nav.pokedex': 'Pokédex',
     'nav.daily': 'Quotidien',
     'lang.label': 'Langue',
     'game.title': 'Devinez le Pokémon!',
@@ -328,7 +328,7 @@ const I18N = {
     'nav.silhouette': 'Silhouette',
     'nav.pixelate': 'Verpixelt',
     'nav.cards': 'Karten',
-    'nav.entry': 'Pokédex',
+    'nav.pokedex': 'Pokédex',
     'nav.daily': 'Täglich',
     'lang.label': 'Sprache',
     'game.title': 'Errate das Pokémon!',
@@ -411,6 +411,8 @@ function resetHints() {
   const box = document.getElementById('hints');
   if (box) { box.innerHTML = ''; dbgHints('resetHints(): cleared #hints box'); }
   else { dbgHints('resetHints(): #hints not found'); }
+  // Also clear timeline panels if shared UI is present
+  try { if (window.HintsUI && typeof HintsUI.clearPanels === 'function') HintsUI.clearPanels(); } catch(_) {}
 }
 function ensureHintsBox() {
   const box = document.getElementById('hints');
@@ -529,7 +531,70 @@ function maybeRevealHints() {
     }
   }
   dbgHints('maybeRevealHints(): complete');
+  // Keep timeline visuals in sync when using the shared UI
+  try {
+    if (window.HintsUI && typeof HintsUI.updateTimeline === 'function') HintsUI.updateTimeline(wrong);
+    if (window.HintsUI && typeof HintsUI.syncRevealed === 'function') HintsUI.syncRevealed();
+  } catch(_) {}
 }
+
+// Install shared timeline override when available (applies to all modes)
+try {
+  if (window.HintsUI && typeof HintsUI.installTimelineOverride === 'function'){
+    HintsUI.installTimelineOverride({
+      renderers: {
+        1: () => {
+          const meta = (typeof state!=='undefined' && state && state.meta) ? state.meta : {};
+          if (!meta || !meta.generation) return null;
+          const wrap = document.createElement('div');
+          wrap.dataset.hint = 'generation';
+          wrap.textContent = t('hints.gen', { n: meta.generation });
+          return wrap;
+        },
+        2: () => {
+          const meta = (typeof state!=='undefined' && state && state.meta) ? state.meta : {};
+          if (!meta || !meta.color) return null;
+          const wrap = document.createElement('div');
+          wrap.dataset.hint = 'color';
+          wrap.textContent = t('hints.color', { color: meta.color });
+          return wrap;
+        },
+        3: () => {
+          const name = (typeof state!=='undefined' && state && state.answer) ? state.answer : '';
+          if (!name) return null;
+          const first = name.trim().charAt(0) || '?';
+          const wrap = document.createElement('div');
+          wrap.dataset.hint = 'first';
+          wrap.textContent = t('hints.first', { letter: first });
+          return wrap;
+        },
+        4: () => {
+          const meta = (typeof state!=='undefined' && state && state.meta) ? state.meta : {};
+          if (!meta || !meta.sprite) return null;
+          const wrap = document.createElement('div');
+          wrap.dataset.hint = 'silhouette';
+          const label = document.createElement('div');
+          label.textContent = t('hints.silhouette');
+          const thumb = document.createElement('div');
+          thumb.style.width = '80px';
+          thumb.style.height = '80px';
+          thumb.style.backgroundImage = `url(${meta.sprite})`;
+          thumb.style.backgroundSize = 'contain';
+          thumb.style.backgroundRepeat = 'no-repeat';
+          thumb.style.backgroundPosition = 'center';
+          thumb.style.filter = 'brightness(0) saturate(100%)';
+          thumb.style.opacity = '0.9';
+          thumb.setAttribute('aria-label', t('hints.silhouette'));
+          wrap.appendChild(label);
+          wrap.appendChild(thumb);
+          return wrap;
+        }
+      }
+    });
+    // Hide legacy list to avoid duplicate display
+    try { const box = document.getElementById('hints'); if (box) box.hidden = true; } catch(_) {}
+  }
+} catch(_) {}
 
 async function newRound() {
   // If there was an active round that wasn't solved, reset streak

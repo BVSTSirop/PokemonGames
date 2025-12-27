@@ -13,6 +13,7 @@ from services.pokemon import (
     get_localized_name,
     get_pokemon_list,
     pick_random_id_for_gen,
+    get_species_metadata,
 )
 
 bp = Blueprint('tcg', __name__)
@@ -210,13 +211,17 @@ def random_tcg():
             if image_url:
                 token = _sign_token(pid)
                 display_name = get_localized_name(pid, lang)
+                meta = get_species_metadata(pid)
                 _log_debug('Found image for round', pid=pid, display_name=display_name, image_url=image_url)
                 return jsonify({
                     'token': token,
+                    'id': pid,
                     'name': display_name,
                     'image': image_url,
                     'bg_size': 'contain',
                     'bg_pos': 'center center',
+                    'color': meta.get('color') or '',
+                    'generation': meta.get('generation') or '',
                 })
         _log_debug('Exhausted attempts without finding card image')
         return jsonify({'error': 'Could not find a TCG card image.'}), 500

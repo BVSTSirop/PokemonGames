@@ -60,7 +60,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (txtEl) {
       txtEl.textContent = '…';
     }
-    const res = await fetch(`/entry/api/random-entry?lang=${encodeURIComponent(getLang())}&gen=${encodeURIComponent(getGen())}`);
+    const res = await fetch(`/pokedex/api/random-entry?lang=${encodeURIComponent(getLang())}&gen=${encodeURIComponent(getGen())}`);
     const data = await res.json();
     state.token = data.token;
     state.answer = data.name;
@@ -75,7 +75,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   async function checkGuess(guess) {
     try {
-      const res = await fetch('/entry/api/check-guess', {
+      const res = await fetch('/pokedex/api/check-guess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: state.token, guess, lang: getLang() })

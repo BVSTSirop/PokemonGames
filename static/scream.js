@@ -239,6 +239,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
     state.token = data.token;
     state.answer = data.name; // for Reveal button
+    // Provide metadata for shared hints (no sprite for cries)
+    state.meta = Object.assign({}, state.meta, {
+      color: data.color,
+      generation: data.generation,
+    });
     stopDrawing();
     setPlayState('play');
     audioEl.src = data.audio || '';
@@ -318,6 +323,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       fb.textContent = t('feedback.wrong');
       fb.className = 'feedback prominent incorrect';
       try { window.noteGuessed && window.noteGuessed(guess); } catch(_){ }
+      try { maybeRevealHints(); } catch(_) {}
     }
   });
 

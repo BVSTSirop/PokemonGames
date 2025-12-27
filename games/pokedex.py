@@ -12,9 +12,10 @@ from services.pokemon import (
     get_pokedex_entry,
     normalize_name,
     pick_random_id_for_gen,
+    get_species_metadata,
 )
 
-bp = Blueprint('entry', __name__, url_prefix='/entry')
+bp = Blueprint('pokedex', __name__, url_prefix='/pokedex')
 
 # In-memory token store for entry guess sessions (legacy, kept for backward compatibility)
 TOKENS = {}  # token -> { 'name': str, 'id': int }
@@ -22,7 +23,7 @@ TOKENS = {}  # token -> { 'name': str, 'id': int }
 
 @bp.route('/')
 def index():
-    return render_template('entry_guess.html', active_page='entry')
+    return render_template('pokedex.html', active_page='entry')
 
 
 def _sign_token(poke_id: int) -> str:
@@ -88,10 +89,14 @@ def random_entry():
                     pattern_en = re.compile(re.escape(display_en), flags=re.IGNORECASE)
                     masked_entry = pattern_en.sub(lambda m: mask_letters(m.group(0)), masked_entry)
                 TOKENS[token] = {'name': display_name, 'id': pid}
+                meta = get_species_metadata(pid)
                 return jsonify({
                     'token': token,
+                    'id': pid,
                     'name': display_name,
                     'entry': masked_entry,
+                    'color': meta.get('color') or '',
+                    'generation': meta.get('generation') or '',
                 })
         return jsonify({"error": "Could not find a Pokédex entry."}), 500
     except Exception as e:
