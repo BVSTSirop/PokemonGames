@@ -476,7 +476,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
         if (!meta.generation) return false;
         const wrap = document.createElement('div');
         wrap.dataset.hint = 'generation';
-        wrap.textContent = t ? t('hints.gen', { n: meta.generation }) : `Generation: ${meta.generation}`;
+        wrap.textContent = t ? t('hints.gen', { n: meta.generation }) : `Gen: ${meta.generation}`;
         panel.appendChild(wrap);
       } else if (level === 2){
         if (!meta.color) return false;
