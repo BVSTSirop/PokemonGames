@@ -17,6 +17,7 @@ from services.pokemon import (
     SPECIES_NAMES,
     filter_pokemon_list_by_gen,
     pick_random_id_for_gen,
+    get_species_metadata,
 )
 
 bp = Blueprint('guess', __name__)
@@ -214,12 +215,16 @@ def random_sprite():
                 y = random.randint(15, 85)
                 bg_pos = f"{x}% {y}%"
                 display_name = get_localized_name(pid, lang)
+                meta = get_species_metadata(pid)
                 return jsonify({
                     'token': token,
+                    'id': pid,
                     'name': display_name,
                     'sprite': sprite,
                     'bg_size': bg_size,
                     'bg_pos': bg_pos,
+                    'color': meta.get('color') or '',
+                    'generation': meta.get('generation') or '',
                 })
         return jsonify({"error": "Could not find a sprite."}), 500
     except Exception as e:

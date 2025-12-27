@@ -12,6 +12,7 @@ POKEMON_NAMES = []  # English display names list (title-cased)
 POKEMON_LIST = []   # List of dicts: { 'id': int, 'slug': str, 'display_en': str }
 DISPLAY_TO_ID = {}  # English display name -> id
 SPECIES_NAMES = {}  # id -> { lang: localized_display }
+SPECIES_META = {}   # id -> { 'color': str, 'generation': str }
 
 POKEAPI_BASE = 'https://pokeapi.co/api/v2'
 SUPPORTED_LANGS = {'en', 'es', 'fr', 'de'}
@@ -177,6 +178,52 @@ def get_sprite_for_pokemon(poke_id):
                 art = k['front_default']
                 break
     return art, j['name']
+
+
+def get_species_metadata(poke_id: int):
+    """Return cached species metadata: color name and generation number as strings.
+    Example: { 'color': 'red', 'generation': '1' }
+    Falls back to empty strings if unavailable.
+    """
+    if poke_id in SPECIES_META:
+        return SPECIES_META[poke_id]
+    try:
+        url = f"{POKEAPI_BASE}/pokemon-species/{poke_id}"
+        r = requests.get(url, timeout=12)
+        r.raise_for_status()
+        j = r.json()
+        color = ''
+        try:
+            color = (j.get('color') or {}).get('name') or ''
+        except Exception:
+            color = ''
+        gen = ''
+        try:
+            gen_name = (j.get('generation') or {}).get('name') or ''  # e.g., 'generation-ii'
+            # Extract trailing roman numeral or number and map to 1..9
+            # Expected format 'generation-i'..'generation-ix'
+            if '-' in gen_name:
+                suffix = gen_name.split('-')[-1]
+                roman_map = {
+                    'i': '1', 'ii': '2', 'iii': '3', 'iv': '4', 'v': '5',
+                    'vi': '6', 'vii': '7', 'viii': '8', 'ix': '9', 'x': '10'
+                }
+                gen = roman_map.get(suffix.lower(), '')
+            if not gen:
+                # fallback by id ranges (approximate)
+                for g, (lo, hi) in GEN_ID_RANGES.items():
+                    if lo <= int(poke_id) <= hi:
+                        gen = str(g)
+                        break
+        except Exception:
+            gen = ''
+        meta = {'color': color, 'generation': gen}
+        SPECIES_META[poke_id] = meta
+        return meta
+    except Exception:
+        meta = {'color': '', 'generation': ''}
+        SPECIES_META[poke_id] = meta
+        return meta
 
 
 def get_cry_for_pokemon(poke_id):

@@ -1,5 +1,13 @@
 let state = { token: null, answer: null, attemptsWrong: 0, roundSolved: false, streak: 0, score: 0, roundActive: false };
 
+// --- Debug helpers for hint tracing (always on) ---
+function dbgHints(){
+  try {
+    const args = Array.prototype.slice.call(arguments);
+    console.debug.apply(console, ['[Hints]'].concat(args));
+  } catch(_) {}
+}
+
 // Determine current game id from the DOM. Templates set data-game on the main <section>.
 function getGameId() {
   try {
@@ -230,8 +238,13 @@ const I18N = {
     'hud.streak': 'Streak',
     'hints.title': 'Hints',
     'hints.first': 'Starts with {letter}',
-    'hints.second': 'Ends with {letter}',
-    'hints.length': 'Name length: {n}'
+    'hints.color': 'Color: {color}',
+    'hints.gen': 'Generation: {n}',
+    'hints.silhouette': 'Silhouette',
+    // Label-only variants for static UI (no placeholders)
+    'hints.label.first': 'Starts with',
+    'hints.label.color': 'Color',
+    'hints.label.gen': 'Generation'
   },
   es: {
     'nav.guess': 'Sprite',
@@ -264,8 +277,12 @@ const I18N = {
     'hud.streak': 'Racha',
     'hints.title': 'Pistas',
     'hints.first': 'Empieza con {letter}',
-    'hints.second': 'Termina con {letter}',
-    'hints.length': 'Longitud del nombre: {n}'
+    'hints.color': 'Color: {color}',
+    'hints.gen': 'Generación: {n}',
+    'hints.silhouette': 'Silueta',
+    'hints.label.first': 'Empieza con',
+    'hints.label.color': 'Color',
+    'hints.label.gen': 'Generación'
   },
   fr: {
     'nav.guess': 'Sprite',
@@ -298,8 +315,12 @@ const I18N = {
     'hud.streak': 'Série',
     'hints.title': 'Indices',
     'hints.first': 'Commence par {letter}',
-    'hints.second': 'Se termine par {letter}',
-    'hints.length': 'Longueur du nom : {n}'
+    'hints.color': 'Couleur : {color}',
+    'hints.gen': 'Génération : {n}',
+    'hints.silhouette': 'Silhouette',
+    'hints.label.first': 'Commence par',
+    'hints.label.color': 'Couleur',
+    'hints.label.gen': 'Génération'
   },
   de: {
     'nav.guess': 'Sprite',
@@ -332,8 +353,12 @@ const I18N = {
     'hud.streak': 'Serie',
     'hints.title': 'Hinweise',
     'hints.first': 'Beginnt mit {letter}',
-    'hints.second': 'Endet mit {letter}',
-    'hints.length': 'Namenslänge: {n}'
+    'hints.color': 'Farbe: {color}',
+    'hints.gen': 'Generation: {n}',
+    'hints.silhouette': 'Silhouette',
+    'hints.label.first': 'Beginnt mit',
+    'hints.label.color': 'Farbe',
+    'hints.label.gen': 'Generation'
   }
 };
 
@@ -384,7 +409,8 @@ function translatePage() {
 function resetHints() {
   try { state.hintLevel = 0; } catch(_) { state.hintLevel = 0; }
   const box = document.getElementById('hints');
-  if (box) box.innerHTML = '';
+  if (box) { box.innerHTML = ''; dbgHints('resetHints(): cleared #hints box'); }
+  else { dbgHints('resetHints(): #hints not found'); }
 }
 function ensureHintsBox() {
   const box = document.getElementById('hints');
@@ -399,35 +425,110 @@ function ensureHintsBox() {
     box.appendChild(list);
     box.dataset.inited = '1';
   }
-  return box.querySelector('.hints-list');
+  const list = box.querySelector('.hints-list');
+  dbgHints('ensureHintsBox(): initialized =', !!box.dataset.inited, 'list?', !!list);
+  return list;
+}
+// Reveal a specific hint level (1..4) exactly once. Returns true if newly revealed.
+function revealHintAt(level) {
+  const list = ensureHintsBox();
+  if (!list) { dbgHints('revealHintAt(): no list; abort level', level); return false; }
+  const name = state.answer || '';
+  const meta = state.meta || {};
+  const has = (key) => !!list.querySelector(`[data-hint="${key}"]`);
+
+  if (level === 1) {
+    if (!name) { dbgHints('revealHintAt(1): missing answer name'); return false; }
+    if (has('first')) { dbgHints('revealHintAt(1): already revealed'); return false; }
+    const first = name.trim().charAt(0) || '?';
+    const li = document.createElement('li');
+    li.dataset.hint = 'first';
+    li.textContent = t('hints.first', { letter: first });
+    list.appendChild(li);
+    state.hintLevel = Math.max(state.hintLevel || 0, 1);
+    dbgHints('revealHintAt(1): appended hint', first);
+    return true;
+  }
+  if (level === 2) {
+    if (!meta.color) { dbgHints('revealHintAt(2): missing meta.color'); return false; }
+    if (has('color')) { dbgHints('revealHintAt(2): already revealed'); return false; }
+    const li = document.createElement('li');
+    li.dataset.hint = 'color';
+    li.textContent = t('hints.color', { color: meta.color });
+    list.appendChild(li);
+    state.hintLevel = Math.max(state.hintLevel || 0, 2);
+    dbgHints('revealHintAt(2): appended color', meta.color);
+    return true;
+  }
+  if (level === 3) {
+    if (!meta.generation) { dbgHints('revealHintAt(3): missing meta.generation'); return false; }
+    if (has('generation')) { dbgHints('revealHintAt(3): already revealed'); return false; }
+    const li = document.createElement('li');
+    li.dataset.hint = 'generation';
+    li.textContent = t('hints.gen', { n: meta.generation });
+    list.appendChild(li);
+    state.hintLevel = Math.max(state.hintLevel || 0, 3);
+    dbgHints('revealHintAt(3): appended generation', meta.generation);
+    return true;
+  }
+  if (level === 4) {
+    if (!meta.sprite) { dbgHints('revealHintAt(4): missing meta.sprite'); return false; }
+    if (has('silhouette')) { dbgHints('revealHintAt(4): already revealed'); return false; }
+    const li = document.createElement('li');
+    li.dataset.hint = 'silhouette';
+    const label = document.createElement('div');
+    label.textContent = t('hints.silhouette');
+    const thumb = document.createElement('div');
+    thumb.style.width = '80px';
+    thumb.style.height = '80px';
+    thumb.style.backgroundImage = `url(${meta.sprite})`;
+    thumb.style.backgroundSize = 'contain';
+    thumb.style.backgroundRepeat = 'no-repeat';
+    thumb.style.backgroundPosition = 'center';
+    thumb.style.filter = 'brightness(0) saturate(100%)';
+    thumb.style.opacity = '0.9';
+    thumb.setAttribute('aria-label', t('hints.silhouette'));
+    li.appendChild(label);
+    li.appendChild(thumb);
+    list.appendChild(li);
+    state.hintLevel = Math.max(state.hintLevel || 0, 4);
+    dbgHints('revealHintAt(4): appended silhouette with sprite present?', !!meta.sprite);
+    return true;
+  }
+  return false;
 }
 function maybeRevealHints() {
   const wrong = state.attemptsWrong || 0;
   const name = state.answer || '';
-  if (!name) return;
-  const list = ensureHintsBox();
-  if (!list) return;
-  // First hint at 5 wrong guesses: starting letter
-  if (wrong >= 5 && (state.hintLevel||0) < 1) {
-    const first = name.trim().charAt(0) || '?';
-    const li = document.createElement('li');
-    li.textContent = t('hints.first', { letter: first });
-    list.appendChild(li);
-    state.hintLevel = 1;
+  // Do not bail out if name is missing — allow levels 2–4 (color/gen/silhouette)
+  // to reveal based on available metadata. Only level 1 requires the name.
+  if (!name) { dbgHints('maybeRevealHints(): no answer yet; will still attempt non-name hints. attemptsWrong=', wrong); }
+  ensureHintsBox();
+  let max = 0;
+  if (wrong >= 3) max = 1;
+  if (wrong >= 5) max = 2;
+  if (wrong >= 7) max = 3;
+  if (wrong >= 10) max = 4;
+  dbgHints('maybeRevealHints(): wrong=', wrong, 'maxLevel=', max, 'meta=', {
+    hasColor: !!(state.meta && state.meta.color),
+    hasGen: !!(state.meta && state.meta.generation),
+    hasSprite: !!(state.meta && state.meta.sprite)
+  });
+  for (let lvl = 1; lvl <= max; lvl++) {
+    try {
+      // If answer is not present, skip level 1 (starting letter) but
+      // still process levels 2–4 using available metadata
+      if (!name && lvl === 1) {
+        dbgHints('maybeRevealHints(): skipping level 1 (no name yet)');
+        continue;
+      }
+      const did = revealHintAt(lvl);
+      dbgHints('maybeRevealHints(): tried reveal level', lvl, '->', did ? 'revealed' : 'skipped');
+    } catch(err) {
+      dbgHints('maybeRevealHints(): error revealing level', lvl, err && (err.message||err));
+    }
   }
-  // Second hint at 10 wrong guesses: ending letter and length
-  if (wrong >= 10 && (state.hintLevel||0) < 2) {
-    const trimmed = name.trim();
-    const last = trimmed.charAt(trimmed.length - 1) || '?';
-    const li1 = document.createElement('li');
-    li1.textContent = t('hints.second', { letter: last });
-    const li2 = document.createElement('li');
-    li2.textContent = t('hints.length', { n: String(trimmed.length) });
-    list.appendChild(li1);
-    list.appendChild(li2);
-    state.hintLevel = 2;
-  }
-
+  dbgHints('maybeRevealHints(): complete');
 }
 
 async function newRound() {
@@ -460,6 +561,13 @@ async function newRound() {
   const data = await res.json();
   state.token = data.token;
   state.answer = data.name; // for Reveal button; not displayed by default
+  // store meta for hints
+  state.meta = {
+    id: data.id,
+    color: data.color,
+    generation: data.generation,
+    sprite: data.sprite,
+  };
   const el = document.getElementById('sprite-crop');
   // Reset any reveal state and disable transitions during setup
   el.classList.remove('revealed');

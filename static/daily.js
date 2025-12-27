@@ -1,6 +1,13 @@
 // Daily Pokédle game script
 
 // Reuse basic i18n and name suggestion approach from game.js, simplified
+// Debug helper (always logs)
+function dbgDailyHints(){
+  try {
+    const args = Array.prototype.slice.call(arguments);
+    console.debug.apply(console, ['[DailyHints]'].concat(args));
+  } catch(_) {}
+}
 const I18N_DAILY = {
   en: {
     'daily.title': 'Daily Pokédle',
@@ -396,6 +403,232 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
   try { await preloadNames(getLang()); } catch(_){ }
 
+  // Helper: thresholds and stepper updater
+  const HINT_THRESHOLDS = [3,5,7,10];
+  function updateHintTimeline(wrong){
+    try{
+      const steps = Array.from(document.querySelectorAll('#hint-timeline .timeline-step'));
+      steps.forEach(step => {
+        const th = parseInt(step.getAttribute('data-th')||'0', 10);
+        if (wrong >= th){ step.classList.add('active'); }
+        else { step.classList.remove('active'); }
+      });
+      dbgDailyHints('updateHintTimeline(): wrong=', wrong, 'active steps=', steps.filter(s=>s.classList.contains('active')).map(s=>s.getAttribute('data-th')));
+    }catch(_){ }
+  }
+
+  // Map thresholds to hint levels and sync visual revealed state
+  const TH_TO_LEVEL = { 3:1, 5:2, 7:3, 10:4 };
+  const LEVEL_TO_TH = { 1:3, 2:5, 3:7, 4:10 };
+  function getStepByLevel(level){
+    return document.querySelector(`#hint-timeline .timeline-step[data-level="${level}"]`) ||
+           document.querySelector(`#hint-timeline .timeline-step[data-th="${LEVEL_TO_TH[level]}"]`);
+  }
+  function getPanelForLevel(level){
+    const step = getStepByLevel(level);
+    if (!step) return null;
+    return step.querySelector('.accordion-content');
+  }
+  function clearTimelineHints(){
+    try{
+      const steps = Array.from(document.querySelectorAll('#hint-timeline .timeline-step'));
+      steps.forEach(step => {
+        step.classList.remove('revealed','open');
+        step.setAttribute('aria-expanded','false');
+        const panel = step.querySelector('.accordion-content');
+        if (panel){ panel.innerHTML = ''; panel.setAttribute('aria-hidden','true'); }
+      });
+      dbgDailyHints('clearTimelineHints(): cleared');
+    }catch(_){ }
+  }
+  // Override reveal to render into the timeline accordion instead of the legacy #hints list
+  function revealHintAt(level){
+    try{
+      const step = getStepByLevel(level);
+      const panel = getPanelForLevel(level);
+      if (!step || !panel) { dbgDailyHints('revealHintAt(): missing step/panel for level', level); return false; }
+      // prevent duplicate reveal of the same level
+      if (panel.querySelector('[data-hint]')) { dbgDailyHints('revealHintAt(): already revealed for level', level); return false; }
+      const name = state.answer || '';
+      const meta = state.meta || {};
+      if (level === 1){
+        if (!name) return false;
+        const first = name.trim().charAt(0) || '?';
+        const wrap = document.createElement('div');
+        wrap.dataset.hint = 'first';
+        wrap.textContent = t ? t('hints.first', { letter: first }) : `Starts with ${first}`;
+        panel.appendChild(wrap);
+      } else if (level === 2){
+        if (!meta.color) return false;
+        const wrap = document.createElement('div');
+        wrap.dataset.hint = 'color';
+        wrap.textContent = t ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`;
+        panel.appendChild(wrap);
+      } else if (level === 3){
+        if (!meta.generation) return false;
+        const wrap = document.createElement('div');
+        wrap.dataset.hint = 'generation';
+        wrap.textContent = t ? t('hints.gen', { n: meta.generation }) : `Generation: ${meta.generation}`;
+        panel.appendChild(wrap);
+      } else if (level === 4){
+        if (!meta.sprite) return false;
+        const wrap = document.createElement('div');
+        wrap.dataset.hint = 'silhouette';
+        const label = document.createElement('div');
+        label.textContent = t ? t('hints.silhouette') : 'Silhouette';
+        const thumb = document.createElement('div');
+        thumb.className = 'silhouette-thumb';
+        thumb.style.backgroundImage = `url(${meta.sprite})`;
+        thumb.setAttribute('aria-label', label.textContent);
+        wrap.appendChild(label);
+        wrap.appendChild(thumb);
+        panel.appendChild(wrap);
+      } else { return false; }
+      step.classList.add('revealed');
+      // Auto-open when revealed
+      step.classList.add('open');
+      step.setAttribute('aria-expanded','true');
+      panel.setAttribute('aria-hidden','false');
+      dbgDailyHints('revealHintAt(): revealed level', level);
+      return true;
+    }catch(err){ dbgDailyHints('revealHintAt(): error', err && (err.message||err)); return false; }
+  }
+  // Install global override so game.js's maybeRevealHints uses our accordion renderer
+  try {
+    window.revealHintAt = revealHintAt;
+    dbgDailyHints('override installed: window.revealHintAt -> timeline accordion');
+  } catch(_) {}
+  function syncRevealedSteps(){
+    try{
+      const steps = Array.from(document.querySelectorAll('#hint-timeline .timeline-step'));
+      steps.forEach(step => {
+        const panel = step.querySelector('.accordion-content');
+        const hasContent = !!(panel && panel.querySelector('[data-hint]'));
+        step.classList.toggle('revealed', hasContent);
+      });
+      dbgDailyHints('syncRevealedSteps(): revealed steps=', steps.filter(s=>s.classList.contains('revealed')).map(s=>s.getAttribute('data-th')));
+    }catch(_){ }
+  }
+
+  async function fetchDailyMeta(){
+    try{
+      const res = await fetch(`/api/daily/meta?lang=${encodeURIComponent(getLang())}`);
+      if (!res.ok) return null;
+      const j = await res.json();
+      try {
+        dbgDailyHints('fetchDailyMeta(): success', { id: j && j.id, name: j && j.name, hasSprite: !!(j && j.sprite), color: j && j.color, generation: j && j.generation });
+      } catch(_) {}
+      return j;
+    }catch(_){ return null; }
+  }
+
+  // Ensure Daily hint metadata is present before attempting to reveal hints
+  async function ensureDailyMetaLoaded(){
+    try{
+      const hasMeta = !!(state && state.meta);
+      const hasAny = !!(hasMeta && (state.meta.color || state.meta.generation || state.meta.sprite));
+      const hasAnswer = !!(state && state.answer);
+      if (hasAny && hasAnswer) { dbgDailyHints('ensureDailyMetaLoaded(): already present'); return true; }
+      const j = await fetchDailyMeta();
+      if (!j) { dbgDailyHints('ensureDailyMetaLoaded(): meta fetch failed'); return false; }
+      try { state.answer = state.answer || (j.name || ''); } catch(_){}
+      try {
+        state.meta = Object.assign({}, state.meta, {
+          id: j.id,
+          sprite: j.sprite,
+          color: j.color,
+          generation: j.generation,
+        });
+      } catch(_){}
+      dbgDailyHints('ensureDailyMetaLoaded(): applied', { hasAnswer: !!state.answer, hasSprite: !!(state.meta && state.meta.sprite), color: state.meta && state.meta.color, generation: state.meta && state.meta.generation });
+      return true;
+    }catch(_){ return false; }
+  }
+
+  // Bind timeline interactions unconditionally so clicks work even if meta fetch is slow
+  function bindHintTimeline(){
+    try{
+      const tl = document.getElementById('hint-timeline');
+      if (!tl || tl.dataset.clickBound === '1') return;
+      tl.addEventListener('click', async (ev) => {
+        const step = ev.target && (ev.target.closest ? ev.target.closest('.timeline-step') : null);
+        if (!step) return;
+        // If already revealed, just toggle accordion open/close
+        const panel0 = step.querySelector('.accordion-content');
+        if (panel0 && panel0.querySelector('[data-hint]')){
+          const open0 = !step.classList.contains('open');
+          step.classList.toggle('open', open0);
+          step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
+          panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+          return;
+        }
+        const th = parseInt(step.getAttribute('data-th')||'0', 10);
+        const wrongNow = state && typeof state.attemptsWrong==='number' ? state.attemptsWrong : 0;
+        dbgDailyHints('timeline click:', { th, wrongNow });
+        if (wrongNow >= th){
+          try {
+            try { await ensureDailyMetaLoaded(); } catch(_){}
+            const lvl = TH_TO_LEVEL[th] || 0;
+            let did = false;
+            if (lvl && typeof revealHintAt === 'function') {
+              did = !!revealHintAt(lvl);
+            } else if (typeof maybeRevealHints === 'function') {
+              maybeRevealHints();
+              did = true;
+            }
+            dbgDailyHints('timeline click reveal:', { level: lvl, did });
+            if (did) {
+              step.classList.add('revealed');
+              // Keep visual state in sync
+              try { syncRevealedSteps(); } catch(_){}
+              try { updateHintTimeline(wrongNow); } catch(_){}
+            }
+          } catch(_){ }
+        }
+      });
+      tl.addEventListener('keydown', async (ev) => {
+        const key = ev.key;
+        if (key !== 'Enter' && key !== ' ') return;
+        const step = ev.target && (ev.target.closest ? ev.target.closest('.timeline-step') : null);
+        if (!step) return;
+        ev.preventDefault();
+        // If already revealed, toggle open/close
+        const panel0 = step.querySelector('.accordion-content');
+        if (panel0 && panel0.querySelector('[data-hint]')){
+          const open0 = !step.classList.contains('open');
+          step.classList.toggle('open', open0);
+          step.setAttribute('aria-expanded', open0 ? 'true' : 'false');
+          panel0.setAttribute('aria-hidden', open0 ? 'false' : 'true');
+          return;
+        }
+        const th = parseInt(step.getAttribute('data-th')||'0', 10);
+        const wrongNow = state && typeof state.attemptsWrong==='number' ? state.attemptsWrong : 0;
+        dbgDailyHints('timeline keydown:', { key, th, wrongNow });
+        if (wrongNow >= th){
+          try {
+            try { await ensureDailyMetaLoaded(); } catch(_){}
+            const lvl = TH_TO_LEVEL[th] || 0;
+            let did = false;
+            if (lvl && typeof revealHintAt === 'function') {
+              did = !!revealHintAt(lvl);
+            } else if (typeof maybeRevealHints === 'function') {
+              maybeRevealHints();
+              did = true;
+            }
+            dbgDailyHints('timeline keydown reveal:', { level: lvl, did });
+            if (did) {
+              step.classList.add('revealed');
+              try { syncRevealedSteps(); } catch(_){}
+              try { updateHintTimeline(wrongNow); } catch(_){}
+            }
+          } catch(_){ }
+        }
+      });
+      tl.dataset.clickBound = '1';
+      dbgDailyHints('bindHintTimeline(): bound');
+    }catch(_){ }
+  }
+
   // restore previous attempts for today
   const key = todayKey();
   const daily = loadDaily();
@@ -460,7 +693,16 @@ window.addEventListener('DOMContentLoaded', async ()=>{
         if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
       } catch(_) {}
     } else {
-      // No attempts counter; keep status area empty on wrong guess
+      // Update attempts and reveal hints progressively
+      try {
+        const wrong = (day.rows.length) - (day.done && day.win ? 1 : 0);
+        state.attemptsWrong = wrong;
+        dbgDailyHints('submit wrong guess: attemptsWrong=', wrong, 'answer=', day.answer, 'meta=', state.meta);
+        try { await ensureDailyMetaLoaded(); } catch(_){ }
+        if (typeof maybeRevealHints === 'function') maybeRevealHints();
+        updateHintTimeline(wrong);
+        try { syncRevealedSteps(); } catch(_){}
+      } catch(_){ }
       statusText('', '');
     }
     daily[key] = day; saveDaily(daily);
@@ -475,4 +717,40 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     document.getElementById('rows').innerHTML = '';
     statusText('', '');
   });
+
+  // Initialize shared hint system for Daily
+  try {
+    // Bind timeline early so it responds even if meta fetch is slow
+    bindHintTimeline();
+    // Fetch today meta (name + hint metadata)
+    const meta = await fetchDailyMeta();
+    if (meta){
+      // Provide data for hints
+      try { state.answer = meta.name || ''; } catch(_){ }
+      try {
+        state.meta = Object.assign({}, state.meta, {
+          id: meta.id,
+          sprite: meta.sprite,
+          color: meta.color,
+          generation: meta.generation,
+        });
+        dbgDailyHints('init meta applied to state:', { hasAnswer: !!state.answer, hasSprite: !!(state.meta && state.meta.sprite), color: state.meta && state.meta.color, generation: state.meta && state.meta.generation });
+      } catch(_){ }
+      // Compute wrong attempts from saved rows
+      const wrong = (day.rows && day.rows.length ? day.rows.length : 0) - (day.done && day.win ? 1 : 0);
+      try { state.attemptsWrong = wrong; } catch(_){ }
+      // Reset timeline accordion contents and legacy box, then reveal current hints up to the threshold
+      try { clearTimelineHints(); } catch(_){ }
+      try { if (typeof resetHints === 'function') resetHints(); } catch(_){ }
+      try { if (typeof maybeRevealHints === 'function') maybeRevealHints(); } catch(_){ }
+      updateHintTimeline(wrong);
+      try { syncRevealedSteps(); } catch(_){ }
+
+      // Ensure timeline is bound (idempotent)
+      bindHintTimeline();
+    }
+    else {
+      dbgDailyHints('fetchDailyMeta(): failed or null; hints will be limited to starting letter once answer is known');
+    }
+  } catch(_){ }
 });

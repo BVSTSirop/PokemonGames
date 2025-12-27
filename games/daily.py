@@ -8,6 +8,8 @@ from services.pokemon import (
     ensure_language_filled,
     normalize_name,
     SPECIES_NAMES,
+    get_sprite_for_pokemon,
+    get_species_metadata,
 )
 
 import requests
@@ -449,3 +451,37 @@ def api_daily_translate():
         except Exception:
             pass
     return jsonify({ 'names': names })
+
+
+# Provide today’s answer metadata for client hint system (sprite/color/generation)
+@bp.route('/api/daily/meta')
+def api_daily_meta():
+    lang = (request.args.get('lang') or 'en').lower()
+    date_key = _today_key_utc()
+    pid = _pick_daily_id(date_key)
+    try:
+        # Localized display name for the species id
+        name = get_localized_name(pid, lang)
+    except Exception:
+        # Fallback to English if localization fails transiently
+        try:
+            name = get_localized_name(pid, 'en')
+        except Exception:
+            name = str(pid)
+    # Fetch sprite and species metadata for hints
+    sprite_url = ''
+    try:
+        sprite_url, _ = get_sprite_for_pokemon(pid)
+    except Exception:
+        sprite_url = ''
+    try:
+        meta = get_species_metadata(pid)
+    except Exception:
+        meta = {'color': '', 'generation': ''}
+    return jsonify({
+        'id': pid,
+        'name': name,
+        'sprite': sprite_url or '',
+        'color': meta.get('color') or '',
+        'generation': meta.get('generation') or '',
+    })

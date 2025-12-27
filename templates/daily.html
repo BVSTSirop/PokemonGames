@@ -15,7 +15,37 @@
   </form>
 
   <div id="status" class="feedback" role="status" aria-live="polite"></div>
-  <div id="hints" class="hints" aria-live="polite"></div>
+  <!-- Horizontal hint timeline (stepper) -->
+  <div id="hint-timeline" class="hint-timeline" aria-hidden="false">
+    <div class="timeline-track">
+      <div class="timeline-step" data-th="3" data-level="1" tabindex="0" role="button" aria-expanded="false" aria-controls="hint-panel-1" aria-label="Hint step 3">
+        <div class="dot"></div>
+        <div class="label" data-i18n="hints.label.first">Starts with</div>
+        <div class="sub">3</div>
+        <div id="hint-panel-1" class="accordion-content" role="region" aria-hidden="true"></div>
+      </div>
+      <div class="timeline-step" data-th="5" data-level="2" tabindex="0" role="button" aria-expanded="false" aria-controls="hint-panel-2" aria-label="Hint step 5">
+        <div class="dot"></div>
+        <div class="label" data-i18n="hints.label.color">Color</div>
+        <div class="sub">5</div>
+        <div id="hint-panel-2" class="accordion-content" role="region" aria-hidden="true"></div>
+      </div>
+      <div class="timeline-step" data-th="7" data-level="3" tabindex="0" role="button" aria-expanded="false" aria-controls="hint-panel-3" aria-label="Hint step 7">
+        <div class="dot"></div>
+        <div class="label" data-i18n="hints.label.gen">Generation</div>
+        <div class="sub">7</div>
+        <div id="hint-panel-3" class="accordion-content" role="region" aria-hidden="true"></div>
+      </div>
+      <div class="timeline-step" data-th="10" data-level="4" tabindex="0" role="button" aria-expanded="false" aria-controls="hint-panel-4" aria-label="Hint step 10">
+        <div class="dot"></div>
+        <div class="label" data-i18n="hints.silhouette">Silhouette</div>
+        <div class="sub">10</div>
+        <div id="hint-panel-4" class="accordion-content" role="region" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+  <!-- Legacy hints container kept for compatibility but hidden by CSS -->
+  <div id="hints" class="hints" aria-live="polite" hidden></div>
 
   <div class="card table-wrap">
     <table class="daily-table">
