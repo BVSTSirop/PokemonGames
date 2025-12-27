@@ -34,6 +34,11 @@ const I18N_DAILY = {
     'form.label': 'Your guess',
     'form.placeholder': 'Type a Pokémon name...',
     'form.guessBtn': 'Guess',
+    // Daily timeline labels
+    'hints.step1': 'Hint 1',
+    'hints.step2': 'Hint 2',
+    'hints.step3': 'Hint 3',
+    'hints.step4': 'Hint 4',
   },
   es: {
     'daily.title': 'Pokédle diario',
@@ -59,6 +64,11 @@ const I18N_DAILY = {
     'form.label': 'Tu respuesta',
     'form.placeholder': 'Escribe un nombre de Pokémon...',
     'form.guessBtn': 'Adivinar',
+    // Daily timeline labels
+    'hints.step1': 'Pista 1',
+    'hints.step2': 'Pista 2',
+    'hints.step3': 'Pista 3',
+    'hints.step4': 'Pista 4',
   },
   fr: {
     'daily.title': 'Pokédle du jour',
@@ -84,6 +94,11 @@ const I18N_DAILY = {
     'form.label': 'Votre réponse',
     'form.placeholder': 'Saisissez un nom de Pokémon…',
     'form.guessBtn': 'Deviner',
+    // Daily timeline labels
+    'hints.step1': 'Indice 1',
+    'hints.step2': 'Indice 2',
+    'hints.step3': 'Indice 3',
+    'hints.step4': 'Indice 4',
   },
   de: {
     'daily.title': 'Tägliches Pokédle',
@@ -109,6 +124,11 @@ const I18N_DAILY = {
     'form.label': 'Dein Tipp',
     'form.placeholder': 'Gib einen Pokémon-Namen ein…',
     'form.guessBtn': 'Raten',
+    // Daily timeline labels
+    'hints.step1': 'Hinweis 1',
+    'hints.step2': 'Hinweis 2',
+    'hints.step3': 'Hinweis 3',
+    'hints.step4': 'Hinweis 4',
   }
 };
 
