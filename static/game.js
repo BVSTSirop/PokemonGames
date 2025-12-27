@@ -614,8 +614,15 @@ async function newRound() {
     const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
     if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
   } catch(_) {}
-  // Reset hints for new round
+  // Reset hints for new round (legacy list + shared timeline)
   try { resetHints(); } catch(_) {}
+  try {
+    // Clear attempts and any previously revealed content
+    state.hintLevel = 0;
+    if (window.HintsUI && typeof HintsUI.clearPanels === 'function') HintsUI.clearPanels();
+    if (window.HintsUI && typeof HintsUI.updateTimeline === 'function') HintsUI.updateTimeline(0);
+    if (window.HintsUI && typeof HintsUI.syncRevealed === 'function') HintsUI.syncRevealed();
+  } catch(_) {}
 
   // Reset guessed list for this round if handler exists
   if (typeof window.resetGuessed === 'function') { try { window.resetGuessed(); } catch(_){} }

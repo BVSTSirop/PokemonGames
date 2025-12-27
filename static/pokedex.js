@@ -56,6 +56,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Reset guessed list UI
     try { window.resetGuessed && window.resetGuessed(); } catch(_){}
 
+    // Reset hint UI state (legacy list + shared timeline)
+    try { resetHints(); } catch(_) {}
+    try {
+      state.hintLevel = 0;
+      if (window.HintsUI && typeof HintsUI.clearPanels === 'function') HintsUI.clearPanels();
+      if (window.HintsUI && typeof HintsUI.updateTimeline === 'function') HintsUI.updateTimeline(0);
+      if (window.HintsUI && typeof HintsUI.syncRevealed === 'function') HintsUI.syncRevealed();
+    } catch(_) {}
+
     const txtEl = document.getElementById('entry-text');
     if (txtEl) {
       txtEl.textContent = '…';

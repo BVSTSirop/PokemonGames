@@ -142,6 +142,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.roundSolved = false;
     state.attemptsWrong = 0;
     try { resetHints(); } catch(_) {}
+    try {
+      state.hintLevel = 0;
+      if (window.HintsUI && typeof HintsUI.clearPanels === 'function') HintsUI.clearPanels();
+      if (window.HintsUI && typeof HintsUI.updateTimeline === 'function') HintsUI.updateTimeline(0);
+      if (window.HintsUI && typeof HintsUI.syncRevealed === 'function') HintsUI.syncRevealed();
+    } catch(_) {}
 
     try {
       const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
