@@ -527,7 +527,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
               if (!meta || !meta.generation) return null;
               const wrap = document.createElement('div');
               wrap.dataset.hint = 'generation';
-              wrap.textContent = (typeof t==='function') ? t('hints.gen', { n: meta.generation }) : `Generation: ${meta.generation}`;
+              wrap.textContent = (typeof t==='function') ? t('hints.gen', { n: meta.generation }) : `Gen: ${meta.generation}`;
               return wrap;
             },
             2: () => {

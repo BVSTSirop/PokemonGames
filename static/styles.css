@@ -154,7 +154,7 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
 /* Accordion content inside timeline steps */
 .hint-timeline .timeline-step .accordion-content{display:none;margin-top:8px;padding:8px 10px;border-radius:10px;background:#0b1130;border:1px solid #27306a;width:100%;max-width:220px;color:var(--text);font-weight:700;text-align:center;pointer-events:auto}
 .hint-timeline .timeline-step.open .accordion-content{display:block}
-.hint-timeline .timeline-step .accordion-content .silhouette-thumb{width:80px;height:80px;margin:6px auto 0;background-size:contain;background-repeat:no-repeat;background-position:center;filter:brightness(0) saturate(100%);opacity:.9;border-radius:8px}
+.hint-timeline .timeline-step .accordion-content .silhouette-thumb{width:80px;height:80px;margin:6px auto 0;background-size:contain;background-repeat:no-repeat;background-position:center center;filter:brightness(0) saturate(100%);opacity:.9;border-radius:8px;display:block}
 @media (max-width:560px){
   .hint-timeline .timeline-track{gap:4px}
   .hint-timeline .timeline-step .label{font-size:12px;max-width:80px}
