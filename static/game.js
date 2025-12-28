@@ -102,9 +102,10 @@ function formatGenLabel(csv) {
   const g = canonicalizeGen(csv);
   if (g === 'all') return t('gen.label.all');
   const parts = g.split(',').map(n => t('gen.label.gen', { n }));
-  if (parts.length <= 3) return parts.join(', ');
-  const head = parts.slice(0, 3).join(', ');
-  return `${head} ${t('gen.label.more', { n: String(parts.length - 3) })}`;
+  // Show only first 2 generations, then "+N more"
+  if (parts.length <= 2) return parts.join(', ');
+  const head = parts.slice(0, 2).join(', ');
+  return `${head} ${t('gen.label.more', { n: String(parts.length - 2) })}`;
 }
 
 function syncGenDropdownFromSelect() {

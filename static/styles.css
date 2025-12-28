@@ -37,7 +37,7 @@ main.container{padding-top:20px;padding-bottom:28px}
 
 /* Nice dropdown with checkboxes for generations */
 .gen-dropdown{position:relative}
-.gen-toggle{display:flex;align-items:center;gap:8px;background:#151d46;color:#fff;border:1px solid #2b386f;border-radius:10px;padding:8px 10px;font-weight:700;cursor:pointer;box-shadow:none}
+.gen-toggle{display:flex;align-items:center;gap:8px;background:#151d46;color:#fff;border:1px solid #2b386f;border-radius:10px;padding:8px 10px;font-weight:700;cursor:pointer;box-shadow:none;white-space:nowrap}
 .gen-toggle:hover{filter:brightness(1.08)}
 .gen-toggle:focus{outline:none;border-color:#5b6df8;box-shadow:0 0 0 3px rgba(59,76,202,.35)}
 .gen-caret{font-size:12px;opacity:.9}
