@@ -15,7 +15,7 @@ main.container{padding-top:20px;padding-bottom:28px}
 .site-header{position:sticky;top:0;z-index:10;background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--glass-border);box-shadow:0 6px 18px rgba(0,0,0,.28)}
 .header-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative}
 .brand{display:flex;align-items:center;gap:12px}
-.brand h1{font-family:"Luckiest Guy", system-ui; letter-spacing:.8px; font-size:26px; color:#fff; margin:10px 0}
+.brand h1{font-family:"Luckiest Guy", system-ui; letter-spacing:.8px; font-size:26px; color:#fff; margin:0; line-height:1}
 .brand .accent{color:#ffea61}
 .pokeball{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px}
 .pokeball img{display:block;width:100%;height:100%}
