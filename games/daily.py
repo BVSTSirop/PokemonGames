@@ -10,6 +10,7 @@ from services.pokemon import (
     SPECIES_NAMES,
     get_sprite_for_pokemon,
     get_species_metadata,
+    resolve_variant_guess_to_species_id,
 )
 
 import requests
@@ -286,6 +287,13 @@ def _resolve_guess_to_id(guess: str, lang: str) -> int | None:
                 except Exception:
                     pass
                 return pid_try
+    except Exception:
+        pass
+    # Variant/form fallback: try mapping guesses like "Zacian Crowned" to species id
+    try:
+        sid = resolve_variant_guess_to_species_id(guess)
+        if isinstance(sid, int):
+            return sid
     except Exception:
         pass
     # Give up

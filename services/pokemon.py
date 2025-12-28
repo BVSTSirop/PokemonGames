@@ -13,6 +13,7 @@ POKEMON_LIST = []   # List of dicts: { 'id': int, 'slug': str, 'display_en': str
 DISPLAY_TO_ID = {}  # English display name -> id
 SPECIES_NAMES = {}  # id -> { lang: localized_display }
 SPECIES_META = {}   # id -> { 'color': str, 'generation': str }
+VARIANT_GUESS_CACHE = {}  # normalized guess -> base species id (or None if unknown)
 
 POKEAPI_BASE = 'https://pokeapi.co/api/v2'
 SUPPORTED_LANGS = {'en', 'es', 'fr', 'de'}
@@ -109,6 +110,14 @@ def get_pokemon_list():
             continue
         display_en = (slug or '').replace('-', ' ').title()
         lst.append({'id': pid, 'slug': slug, 'display_en': display_en})
+    # Filter out non-default form variants: PokeAPI assigns IDs > 10000 to forms/variants.
+    # Keep only real species (main dex entries). Compute max species id from known gen ranges.
+    try:
+        max_species_id = max(hi for (_, hi) in GEN_ID_RANGES.values())
+    except Exception:
+        # Fallback to Gen 9 upper bound if anything goes wrong
+        max_species_id = 1025
+    lst = [p for p in lst if isinstance(p.get('id'), int) and p['id'] <= max_species_id]
     lst.sort(key=lambda x: x['id'])
     POKEMON_LIST = lst
     DISPLAY_TO_ID = {p['display_en']: p['id'] for p in lst}
@@ -349,3 +358,143 @@ def get_pokedex_entry(poke_id: int, lang: str) -> str:
         return ''
     except Exception:
         return ''
+
+
+# --- Variant/form guess resolution helpers ---
+def _slugify_guess_for_form_lookup(guess: str) -> list[str]:
+    """Generate possible PokeAPI form name candidates for a free-text guess.
+    Examples:
+      "Zacian Crowned" -> ["zacian-crowned"]
+      "Mega Charizard X" -> ["charizard-mega-x", "charizard-mega"]
+      "Gigantamax Charizard" -> ["charizard-gmax"]
+      "Alolan Raichu" -> ["raichu-alola", "raichu-alolan"]
+      "Galarian Meowth" -> ["meowth-galar", "meowth-galarian"]
+      "Hisuian Growlithe" -> ["growlithe-hisui", "growlithe-hisuian"]
+      "Paldean Tauros" -> ["tauros-paldea", "tauros-paldean"]
+      "Kyurem Black" -> ["kyurem-black"]
+      "Kyurem White" -> ["kyurem-white"]
+      "Castform Rainy" -> ["castform-rainy"]
+    The list is ordered from most-specific to more-generic candidates.
+    """
+    if not isinstance(guess, str):
+        return []
+    g = (guess or '').strip().lower()
+    # Basic tokenization
+    tokens = [t for t in g.replace('_', ' ').replace('-', ' ').split() if t]
+    if not tokens:
+        return []
+
+    # Recognize regional adjectives
+    region_map = {
+        'alolan': 'alola', 'alola': 'alola',
+        'galarian': 'galar', 'galar': 'galar',
+        'hisuian': 'hisui', 'hisui': 'hisui',
+        'paldean': 'paldea', 'paldea': 'paldea',
+    }
+    # Form keywords left as-is
+    form_words = {
+        'crowned', 'hero', 'blade', 'shield', 'therian', 'incarnate', 'origin',
+        'black', 'white', 'sunny', 'rainy', 'snowy', 'plant', 'sandy', 'trash',
+        'east', 'west', 'ice', 'ice-rider', 'shadow', 'school', 'solo', 'amped', 'low-key',
+        'dusk', 'dawn', 'midday', 'midnight', 'busted', 'disguised', 'complete', '10', '50', 'speed',
+    }
+    # Special mechanics
+    is_mega = 'mega' in tokens
+    is_gmax = ('gigantamax' in tokens) or ('gmax' in tokens)
+
+    # Identify base name (first token that isn't an adjective like alolan/galarian/hisuian/paldean/mega/gmax/gigantamax)
+    base_tokens = [t for t in tokens if t not in {'alolan', 'alola', 'galarian', 'galar', 'hisuian', 'hisui', 'paldean', 'paldea', 'mega', 'gigantamax', 'gmax'}]
+    if not base_tokens:
+        base_tokens = tokens[:]  # fallback
+    base = base_tokens[0]
+
+    # Extract qualifiers (other tokens excluding base)
+    qualifiers = [t for t in tokens if t != base]
+    # Map regional adjectives to form suffix
+    region_suffixes = [region_map[t] for t in qualifiers if t in region_map]
+    # Other form words kept verbatim
+    other_suffixes = [t for t in qualifiers if (t not in region_map and t not in {'mega', 'gigantamax', 'gmax'})]
+
+    candidates: list[str] = []
+
+    # Regional forms: base-region
+    for r in region_suffixes:
+        candidates.append(f"{base}-{r}")
+        # also accept adjective style just in case
+        candidates.append(f"{base}-{r}ian")
+
+    # Direct form words: base-suffix
+    for s in other_suffixes:
+        s_norm = s.replace(' ', '-')
+        candidates.append(f"{base}-{s_norm}")
+
+    # Mega forms
+    if is_mega:
+        # Handle possible X/Y
+        xy = [t for t in qualifiers if t in {'x', 'y'}]
+        if xy:
+            for v in xy:
+                candidates.append(f"{base}-mega-{v}")
+        candidates.append(f"{base}-mega")
+
+    # Gigantamax forms
+    if is_gmax:
+        candidates.append(f"{base}-gmax")
+
+    # Fallback: concat tokens with hyphen as typed order
+    candidates.append('-'.join(tokens))
+
+    # Deduplicate while preserving order
+    seen = set()
+    out = []
+    for c in candidates:
+        if c and c not in seen:
+            seen.add(c)
+            out.append(c)
+    return out
+
+
+def resolve_variant_guess_to_species_id(guess: str):
+    """Try to map a free-text guess that may include a form/variant to the base species id.
+    Returns an int species id if resolved, or None otherwise. Caches results.
+    """
+    try:
+        key = normalize_name(guess)
+    except Exception:
+        key = str(guess or '')
+    if key in VARIANT_GUESS_CACHE:
+        return VARIANT_GUESS_CACHE[key]
+
+    try:
+        candidates = _slugify_guess_for_form_lookup(guess)
+        for cand in candidates:
+            # Try pokemon-form first (best for forms/variants)
+            try:
+                url = f"{POKEAPI_BASE}/pokemon-form/{cand}"
+                r = requests.get(url, timeout=8)
+                if r.status_code == 200:
+                    fj = r.json()
+                    # Get base pokemon id from form json
+                    p = (fj.get('pokemon') or {})
+                    p_url = p.get('url') or ''
+                    parts = [pp for pp in p_url.strip('/').split('/') if pp]
+                    pid = int(parts[-1]) if parts and parts[-1].isdigit() else None
+                    if pid:
+                        # Fetch species id from pokemon endpoint
+                        r2 = requests.get(f"{POKEAPI_BASE}/pokemon/{pid}", timeout=8)
+                        r2.raise_for_status()
+                        pj = r2.json()
+                        s_url = (pj.get('species') or {}).get('url') or ''
+                        s_parts = [pp for pp in s_url.strip('/').split('/') if pp]
+                        sid = int(s_parts[-1]) if s_parts and s_parts[-1].isdigit() else None
+                        if isinstance(sid, int):
+                            VARIANT_GUESS_CACHE[key] = sid
+                            return sid
+            except Exception:
+                # ignore and try next candidate
+                pass
+    except Exception:
+        pass
+
+    VARIANT_GUESS_CACHE[key] = None
+    return None

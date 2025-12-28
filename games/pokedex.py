@@ -14,6 +14,7 @@ from services.pokemon import (
     pick_random_id_for_gen,
     get_species_metadata,
     get_sprite_for_pokemon,
+    resolve_variant_guess_to_species_id,
 )
 
 bp = Blueprint('pokedex', __name__, url_prefix='/pokedex')
@@ -189,6 +190,18 @@ def check_guess():
                     return jsonify({'correct': True, 'name': localized_final})
         except Exception:
             continue
+
+    # Variant/form fallback: accept if guess maps to same species
+    try:
+        sid = resolve_variant_guess_to_species_id(guess)
+        if isinstance(sid, int) and sid == answer['id']:
+            try:
+                localized_final = get_localized_name(answer['id'], lang)
+            except Exception:
+                localized_final = display_en or answer.get('name')
+            return jsonify({'correct': True, 'name': localized_final})
+    except Exception:
+        pass
 
     try:
         localized = get_localized_name(answer['id'], lang)

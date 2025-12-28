@@ -18,6 +18,7 @@ from services.pokemon import (
     filter_pokemon_list_by_gen,
     pick_random_id_for_gen,
     get_species_metadata,
+    resolve_variant_guess_to_species_id,
 )
 
 bp = Blueprint('guess', __name__)
@@ -323,6 +324,18 @@ def check_guess():
                     return jsonify({'correct': True, 'name': localized_final})
         except Exception:
             continue
+
+    # Variant/form fallback: if guess refers to a form of the same species, accept
+    try:
+        sid = resolve_variant_guess_to_species_id(guess)
+        if isinstance(sid, int) and sid == answer['id']:
+            try:
+                localized_final = get_localized_name(answer['id'], lang)
+            except Exception:
+                localized_final = display_en or answer.get('name')
+            return jsonify({'correct': True, 'name': localized_final})
+    except Exception:
+        pass
 
     # No match — incorrect
     # Return localized name for UI messaging (current language or fallback)
