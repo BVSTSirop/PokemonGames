@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff6b6b"/>
+      <stop offset="1" stop-color="#e3350d"/>
+    </linearGradient>
+  </defs>
+  <!-- Outer circle -->
+  <circle cx="32" cy="32" r="30" fill="#000"/>
+  <circle cx="32" cy="32" r="28" fill="#ffffff"/>
+  <!-- Top half red -->
+  <path d="M32 4a28 28 0 0 1 28 28H4A28 28 0 0 1 32 4z" fill="url(#g)"/>
+  <!-- Center band -->
+  <rect x="4" y="29" width="56" height="6" fill="#000"/>
+  <!-- Center button -->
+  <circle cx="32" cy="32" r="10" fill="#000"/>
+  <circle cx="32" cy="32" r="7" fill="#ffffff"/>
+  <circle cx="32" cy="32" r="4" fill="#e9eef5"/>
+  <!-- Simple highlight -->
+  <circle cx="28.5" cy="27.5" r="2.2" fill="#fff" opacity=".85"/>
+</svg>
