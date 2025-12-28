@@ -19,6 +19,10 @@ main.container{padding-top:20px;padding-bottom:28px}
 .brand .accent{color:#ffea61}
 .pokeball{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px}
 .pokeball img{display:block;width:100%;height:100%}
+/* Make the Poké Ball icon larger on desktop */
+@media (min-width: 768px){
+  .brand .pokeball{width:48px;height:48px}
+}
 /* Desktop nav styles */
 .site-nav{display:flex;align-items:center;gap:6px}
 .site-nav a{position:relative;display:inline-flex;align-items:center;gap:8px;color:#e6e9ff;text-decoration:none;font-weight:700;opacity:1;padding:10px 12px;border-radius:10px;transition:background .2s ease, color .2s ease, transform .06s ease}
