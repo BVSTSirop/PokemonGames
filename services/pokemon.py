@@ -90,11 +90,16 @@ def pick_random_id_for_gen(gen: str):
 
 
 def get_pokemon_list():
-    """Return cached list of Pokemon with ids and English display names."""
+    """Return cached list of base species with ids and English display names.
+    Uses the pokemon-species endpoint to avoid default-form names like
+    "aegislash-shield" leaking in from /pokemon. This ensures suggestions
+    and listings always use base species names (e.g., "Aegislash").
+    """
     global POKEMON_LIST, DISPLAY_TO_ID, POKEMON_NAMES
     if POKEMON_LIST:
         return POKEMON_LIST
-    url = f"{POKEAPI_BASE}/pokemon?limit=20000"
+    # Use species index rather than /pokemon to avoid form names
+    url = f"{POKEAPI_BASE}/pokemon-species?limit=20000"
     resp = requests.get(url, timeout=20)
     resp.raise_for_status()
     data = resp.json()
@@ -110,12 +115,10 @@ def get_pokemon_list():
             continue
         display_en = (slug or '').replace('-', ' ').title()
         lst.append({'id': pid, 'slug': slug, 'display_en': display_en})
-    # Filter out non-default form variants: PokeAPI assigns IDs > 10000 to forms/variants.
-    # Keep only real species (main dex entries). Compute max species id from known gen ranges.
+    # Filter to known species id range (defensive; species API already is species-only)
     try:
         max_species_id = max(hi for (_, hi) in GEN_ID_RANGES.values())
     except Exception:
-        # Fallback to Gen 9 upper bound if anything goes wrong
         max_species_id = 1025
     lst = [p for p in lst if isinstance(p.get('id'), int) and p['id'] <= max_species_id]
     lst.sort(key=lambda x: x['id'])
@@ -186,7 +189,24 @@ def get_sprite_for_pokemon(poke_id):
             if isinstance(k, dict) and k.get('front_default'):
                 art = k['front_default']
                 break
-    return art, j['name']
+    # Always return the base species display name (English) instead of the form name
+    try:
+        base_name = get_localized_name(poke_id, 'en')
+    except Exception:
+        # Fallbacks: try cached list, then raw API name
+        base_name = None
+        try:
+            for p in get_pokemon_list():
+                if p['id'] == poke_id:
+                    base_name = p.get('display_en')
+                    break
+        except Exception:
+            pass
+        if not base_name:
+            base_name = j.get('name') or str(poke_id)
+            if isinstance(base_name, str):
+                base_name = base_name.replace('-', ' ').title()
+    return art, base_name
 
 
 def get_species_metadata(poke_id: int):
