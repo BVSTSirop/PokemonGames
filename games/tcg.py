@@ -1,6 +1,4 @@
 from flask import Blueprint, jsonify, render_template, request, current_app
-import hmac
-import hashlib
 import os
 import random
 import time
@@ -15,6 +13,7 @@ from services.pokemon import (
     pick_random_id_for_gen,
     get_species_metadata,
 )
+from services.tokens import sign_token as _sign_token
 
 bp = Blueprint('tcg', __name__)
 
@@ -35,18 +34,6 @@ def _log_debug(message: str, **fields):
         except Exception:
             pass
 
-
-def _sign_token(poke_id: int) -> str:
-    """Create a stateless signed token that encodes the Pokémon id.
-    Format: "<id>.<hex_sha256_hmac>" where HMAC is over the ascii id using app.secret_key.
-    """
-    try:
-        key = (current_app.secret_key or '').encode('utf-8')
-    except Exception:
-        key = b''
-    msg = str(int(poke_id)).encode('ascii')
-    sig = hmac.new(key, msg, hashlib.sha256).hexdigest()
-    return f"{int(poke_id)}.{sig}"
 
 
 def _tcg_api_key():

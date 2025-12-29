@@ -2,8 +2,6 @@ from flask import Blueprint, jsonify, render_template, request, current_app
 import random
 import secrets
 import re
-import hmac
-import hashlib
 
 from services.pokemon import (
     SUPPORTED_LANGS,
@@ -16,6 +14,7 @@ from services.pokemon import (
     get_sprite_for_pokemon,
     resolve_variant_guess_to_species_id,
 )
+from services.tokens import sign_token as _sign_token, verify_token as _verify_token
 
 bp = Blueprint('pokedex', __name__, url_prefix='/pokedex')
 
@@ -27,38 +26,6 @@ TOKENS = {}  # token -> { 'name': str, 'id': int }
 def index():
     return render_template('pokedex.html', active_page='entry')
 
-
-def _sign_token(poke_id: int) -> str:
-    """Create a stateless signed token that encodes the Pokémon id.
-    Format: "<id>.<hex_sha256_hmac>" where HMAC is over the ascii id using app.secret_key.
-    """
-    try:
-        key = (current_app.secret_key or '').encode('utf-8')
-    except Exception:
-        key = b''
-    msg = str(int(poke_id)).encode('ascii')
-    sig = hmac.new(key, msg, hashlib.sha256).hexdigest()
-    return f"{int(poke_id)}.{sig}"
-
-
-def _verify_token(token: str):
-    """Verify signed token and return embedded Pokémon id (int) or None if invalid."""
-    if not isinstance(token, str) or '.' not in token:
-        return None
-    pid_str, sig_hex = token.split('.', 1)
-    try:
-        pid = int(pid_str)
-    except Exception:
-        return None
-    try:
-        key = (current_app.secret_key or '').encode('utf-8')
-    except Exception:
-        key = b''
-    msg = str(pid).encode('ascii')
-    expected = hmac.new(key, msg, hashlib.sha256).hexdigest()
-    if hmac.compare_digest(expected, sig_hex):
-        return pid
-    return None
 
 
 @bp.route('/api/random-entry')

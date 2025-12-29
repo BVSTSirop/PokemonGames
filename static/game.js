@@ -1,4 +1,4 @@
-let state = { token: null, answer: null, attemptsWrong: 0, roundSolved: false, streak: 0, score: 0, roundActive: false };
+let state = { token: null, answer: null, attemptsWrong: 0, roundSolved: false, streak: 0, score: 0, roundActive: false, revealed: false };
 
 // --- Debug helpers for hint tracing (always on) ---
 function dbgHints(){
@@ -53,6 +53,111 @@ function updateHUD() {
   const stEl = document.getElementById('hud-streak');
   if (sEl) sEl.textContent = String(state.score || 0);
   if (stEl) stEl.textContent = String(state.streak || 0);
+}
+
+// ----- Shared UI control toggles -----
+// Enable/disable Guess button, Reveal button, and input consistently across all modes
+function setRoundControlsDisabled(disabled = true) {
+  try {
+    const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
+    if (guessBtn) {
+      guessBtn.disabled = !!disabled;
+      guessBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    }
+  } catch (_) {}
+  try {
+    const revealBtn = document.getElementById('reveal-btn');
+    if (revealBtn) {
+      revealBtn.disabled = !!disabled;
+      revealBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    }
+  } catch (_) {}
+  try {
+    const input = document.getElementById('guess-input');
+    if (input) {
+      input.disabled = !!disabled;
+      input.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      if (disabled) {
+        try { hideSuggestions(); } catch (_) {}
+      } else {
+        // ensure focus is possible again
+        // no-op
+      }
+    }
+  } catch (_) {}
+}
+
+// ----- Unified round reset helpers (reusable across all modes) -----
+// Called when a wrong guess happens: resets streak only (score unchanged), persists and updates HUD.
+function resetOnWrongGuess() {
+  try {
+    if ((state.streak || 0) !== 0) {
+      state.streak = 0;
+      saveStats();
+      updateHUD();
+    }
+  } catch (_) {}
+}
+
+// Called when the user presses Reveal: reset streak and score, mark as revealed (not solved).
+function resetOnReveal() {
+  try {
+    state.streak = 0;
+    state.score = 0;
+    state.revealed = true;
+    state.roundSolved = false; // explicitly mark as not solved
+    // End round interactions: disable Guess, Reveal and Input consistently
+    try { setRoundControlsDisabled(true); } catch(_) {}
+    // Mark round as no longer active (optional bookkeeping)
+    try { state.roundActive = false; } catch(_) {}
+    saveStats();
+    updateHUD();
+  } catch (_) {}
+}
+
+// Called at the beginning of a new round to penalize abandoning an unsolved round.
+function resetOnAbandon() {
+  try {
+    if (state.roundActive && !state.roundSolved && !state.revealed) {
+      state.streak = 0;
+      state.score = 0;
+      saveStats();
+      updateHUD();
+    }
+  } catch (_) {}
+}
+
+// ----- Unified scoring helpers (reusable across all modes) -----
+// Default scoring rules are consistent across modes unless overridden.
+// By default: 100 points for a correct guess on the first try; -25 per wrong attempt; min 0.
+function getScoreRules(mode = getGameId()) {
+  const m = String(mode || '').toLowerCase();
+  // If in future a mode needs specific tuning, add a case here.
+  switch (m) {
+    // example: case 'pixelate': return { base: 100, penalty: 25, min: 0 };
+    default:
+      return { base: 100, penalty: 25, min: 0 };
+  }
+}
+function computePoints({ wrong = 0, mode = getGameId(), base, penalty, min } = {}) {
+  const rules = Object.assign({}, getScoreRules(mode));
+  if (Number.isFinite(base)) rules.base = base;
+  if (Number.isFinite(penalty)) rules.penalty = penalty;
+  if (Number.isFinite(min)) rules.min = min;
+  const w = Math.max(0, Number(wrong) || 0);
+  return Math.max(rules.min, rules.base - rules.penalty * w);
+}
+function awardCorrect({ wrong = 0, mode = getGameId() } = {}) {
+  // Prevent awarding if already solved or revealed
+  if (state.roundSolved || state.revealed) return;
+  const pts = computePoints({ wrong, mode });
+  state.score = (state.score || 0) + pts;
+  state.streak = (state.streak || 0) + 1;
+  state.roundSolved = true;
+  try { saveStats(); } catch(_) {}
+  try { updateHUD(); } catch(_) {}
+  // Disable further interaction until Next
+  try { setRoundControlsDisabled(true); } catch(_) {}
 }
 
 // Localized names cache per (lang|genCSV) key: { 'en|all' or 'en|1,3,5': [names...] }
@@ -598,23 +703,14 @@ try {
 } catch(_) {}
 
 async function newRound() {
-  // If there was an active round that wasn't solved, reset streak
-  if (state.roundActive && !state.roundSolved) {
-    if (state.streak !== 0) {
-      state.streak = 0;
-      state.score = 0;
-      saveStats();
-      updateHUD();
-    }
-  }
+  // If there was an active round that wasn't solved (and not revealed), reset score and streak
+  resetOnAbandon();
   state.roundActive = true;
   state.roundSolved = false;
+  state.revealed = false;
   state.attemptsWrong = 0;
-  // Re-enable Guess button for a fresh round
-  try {
-    const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
-    if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
-  } catch(_) {}
+  // Re-enable Guess, Reveal and Input for a fresh round
+  try { setRoundControlsDisabled(false); } catch(_) {}
   // Reset hints for new round (legacy list + shared timeline)
   try { resetHints(); } catch(_) {}
   try {
@@ -933,16 +1029,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (res.correct) {
-      // Award points only the first time the round is solved
-      if (!state.roundSolved) {
-        const wrong = state.attemptsWrong || 0;
-        const points = Math.max(0, 100 - 25 * wrong);
-        state.score = (state.score || 0) + points;
-        state.streak = (state.streak || 0) + 1;
-        state.roundSolved = true;
-        saveStats();
-        updateHUD();
-      }
+      // Award points only the first time the round is solved (centralized logic)
+      awardCorrect({ wrong: state.attemptsWrong || 0, mode: getGameId() });
       fb.textContent = t('feedback.correct', { name: res.name });
       fb.className = 'feedback prominent correct';
       // Disable Guess button after a correct answer
@@ -954,6 +1042,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
       // Increment wrong attempts and give a visual hint by zooming out
       state.attemptsWrong = (state.attemptsWrong || 0) + 1;
+      // Wrong guess ends streak but keeps score
+      try { resetOnWrongGuess(); } catch(_) {}
       // Feedback message for wrong guess
       fb.textContent = t('feedback.wrong');
       fb.className = 'feedback prominent incorrect';
@@ -990,15 +1080,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     fb.textContent = t('feedback.reveal', { name: state.answer });
     fb.className = 'feedback prominent reveal';
     revealFullSprite();
-    // Reveal breaks the streak
-    if (state.streak !== 0) {
-      state.streak = 0;
-      state.score = 0;
-      saveStats();
-      updateHUD();
-    }
-    // Mark round as not solved
-    state.roundSolved = false;
+    // Standardized reveal handling
+    resetOnReveal();
   });
 
   document.getElementById('next-btn').addEventListener('click', () => {

@@ -62,16 +62,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function newRoundTCG() {
-    if (state.roundActive && !state.roundSolved) {
-      if (state.streak !== 0) {
-        state.streak = 0;
-        state.score = 0;
-        saveStats();
-        updateHUD();
-      }
-    }
+    if (typeof resetOnAbandon === 'function') { resetOnAbandon(); }
     state.roundActive = true;
     state.roundSolved = false;
+    state.revealed = false;
     state.attemptsWrong = 0;
     try { resetHints(); } catch(_) {}
     try {
@@ -81,11 +75,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (window.HintsUI && typeof HintsUI.syncRevealed === 'function') HintsUI.syncRevealed();
     } catch(_) {}
 
-    // Re-enable Guess button for a fresh round
-    try {
-      const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
-      if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
-    } catch(_) {}
+    // Re-enable Guess, Reveal and Input for a fresh round
+    try { if (typeof setRoundControlsDisabled === 'function') setRoundControlsDisabled(false); } catch(_) {}
 
     if (typeof window.resetGuessed === 'function') { try { window.resetGuessed(); } catch(_){} }
 
@@ -190,12 +181,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (data.correct) {
-      state.roundSolved = true;
-      state.streak = (state.streak || 0) + 1;
-      const add = Math.max(1, 10 - (state.attemptsWrong || 0));
-      state.score = (state.score || 0) + add;
-      saveStats();
-      updateHUD();
+      if (typeof awardCorrect === 'function') {
+        awardCorrect({ wrong: state.attemptsWrong || 0, mode: getGameId && getGameId() });
+      } else {
+        state.roundSolved = true;
+        state.streak = (state.streak || 0) + 1;
+        const add = Math.max(1, 10 - (state.attemptsWrong || 0));
+        state.score = (state.score || 0) + add;
+        saveStats();
+        updateHUD();
+      }
       fb.textContent = `Correct! It was ${data.name}.`;
       fb.className = 'feedback prominent correct';
       try {
@@ -210,11 +205,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.attemptsWrong = (state.attemptsWrong || 0) + 1;
       // Unblur slightly on each wrong guess
       setCardBlur(state.attemptsWrong);
-      if (state.streak !== 0) {
-        state.streak = 0;
-        saveStats();
-        updateHUD();
-      }
+      if (typeof resetOnWrongGuess === 'function') { resetOnWrongGuess(); }
       window.noteGuessed && window.noteGuessed(guess);
       fb.textContent = `Nope — try again.`;
       fb.className = 'feedback prominent incorrect';
@@ -231,7 +222,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const fb = document.getElementById('feedback');
     fb.textContent = `Revealed: ${state.answer || ''}`;
     fb.className = 'feedback prominent reveal';
-    state.roundSolved = true;
+    if (typeof resetOnReveal === 'function') { resetOnReveal(); }
   });
 
   document.getElementById('next-btn').addEventListener('click', () => {

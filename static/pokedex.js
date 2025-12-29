@@ -35,23 +35,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   };
 
   async function newRound() {
-    // Reset streak if previous round not solved
-    if (state.roundActive && !state.roundSolved) {
-      if (state.streak !== 0) {
-        state.streak = 0; state.score = 0;
-        if (typeof saveStats === 'function') saveStats();
-        if (typeof updateHUD === 'function') updateHUD();
-      }
-    }
+    // Penalize abandoning an unsolved round in a unified way
+    if (typeof resetOnAbandon === 'function') { resetOnAbandon(); }
     state.roundActive = true;
     state.roundSolved = false;
+    state.revealed = false;
     state.attemptsWrong = 0;
 
-    // Re-enable Guess button for a new round
-    try {
-      const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
-      if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
-    } catch(_) {}
+    // Re-enable Guess, Reveal and Input for a new round
+    try { if (typeof setRoundControlsDisabled === 'function') setRoundControlsDisabled(false); } catch(_) {}
 
     // Reset guessed list UI
     try { window.resetGuessed && window.resetGuessed(); } catch(_){}
@@ -140,11 +132,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       if (res.correct) {
-        if (!state.roundSolved) {
+        if (typeof awardCorrect === 'function') {
+          awardCorrect({ wrong: state.attemptsWrong || 0, mode: getGameId && getGameId() });
+        } else {
+          // Fallback (shouldn't happen): basic award
+          state.streak = (state.streak || 0) + 1;
           const wrong = state.attemptsWrong || 0;
           const points = Math.max(0, 100 - 25 * wrong);
           state.score = (state.score || 0) + points;
-          state.streak = (state.streak || 0) + 1;
           state.roundSolved = true;
           if (typeof saveStats === 'function') saveStats();
           if (typeof updateHUD === 'function') updateHUD();
@@ -157,12 +152,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         } catch(_) {}
       } else {
         state.attemptsWrong = (state.attemptsWrong || 0) + 1;
-        // A wrong guess ends the current streak for this mode
-        if (state.streak !== 0) {
-          state.streak = 0;
-          if (typeof saveStats === 'function') saveStats();
-          if (typeof updateHUD === 'function') updateHUD();
-        }
+        // A wrong guess ends the current streak (score unchanged)
+        if (typeof resetOnWrongGuess === 'function') { resetOnWrongGuess(); }
         if (fb) { fb.textContent = (typeof t==='function'? t('feedback.wrong') : 'Nope, try again!'); fb.className = 'feedback prominent incorrect'; }
         try { window.noteGuessed && window.noteGuessed(guess); } catch(_){}
         try { if (typeof maybeRevealHints === 'function') maybeRevealHints(); } catch(_) {}
@@ -175,13 +166,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     revealBtn.addEventListener('click', () => {
       const fb = document.getElementById('feedback');
       if (fb) { fb.textContent = (typeof t==='function'? t('feedback.reveal', { name: state.answer }) : `It was ${state.answer}`); fb.className = 'feedback prominent reveal'; }
-      // Reveal breaks the streak
-      if (state.streak !== 0) {
-        state.streak = 0; state.score = 0;
-        if (typeof saveStats === 'function') saveStats();
-        if (typeof updateHUD === 'function') updateHUD();
-      }
-      state.roundSolved = false;
+      if (typeof resetOnReveal === 'function') { resetOnReveal(); }
     });
   }
 

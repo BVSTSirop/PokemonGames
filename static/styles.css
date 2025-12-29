@@ -254,3 +254,39 @@ main{flex:1 0 auto}
   .audio-ui{flex-wrap:wrap}
   .audio-visual{order:2;width:calc(100% - 60px)}
 }
+
+/* --- Unified visible disabled states for round controls (buttons + input) --- */
+/* Apply to native disabled controls and to elements marked with aria-disabled */
+
+/* Buttons */
+button:disabled,
+.btn:disabled,
+button[aria-disabled="true"],
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none; /* prevent hover/active effects */
+  filter: grayscale(20%);
+}
+
+/* Inputs */
+input:disabled,
+input[disabled],
+input[aria-disabled="true"],
+textarea:disabled,
+textarea[disabled],
+textarea[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: rgba(0,0,0,0.05);
+  color: #666;
+  border-color: rgba(0,0,0,0.15);
+}
+
+/* Prevent hover/active visual states when disabled */
+.btn:disabled:hover,
+.btn[aria-disabled="true"]:hover,
+button:disabled:hover,
+button[aria-disabled="true"]:hover {
+  filter: none;
+}

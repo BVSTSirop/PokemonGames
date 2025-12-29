@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import unicodedata
 
 import requests
+from .core import POKEAPI_BASE, SUPPORTED_LANGS
 
 # In-memory caches and executors shared across games
 POKEMON_NAMES = []  # English display names list (title-cased)
@@ -15,8 +16,6 @@ SPECIES_NAMES = {}  # id -> { lang: localized_display }
 SPECIES_META = {}   # id -> { 'color': str, 'generation': str }
 VARIANT_GUESS_CACHE = {}  # normalized guess -> base species id (or None if unknown)
 
-POKEAPI_BASE = 'https://pokeapi.co/api/v2'
-SUPPORTED_LANGS = {'en', 'es', 'fr', 'de'}
 
 # Thread pool for parallel species fetches (bounded to be polite to PokeAPI)
 EXECUTOR = ThreadPoolExecutor(max_workers=8)
@@ -325,60 +324,11 @@ def ensure_language_filled(lang: str):
             pass
 
 
-def normalize_name(s: str) -> str:
-    if not isinstance(s, str):
-        s = str(s)
-    s = s.strip()
-    s = unicodedata.normalize('NFKD', s)
-    s = ''.join(c for c in s if not unicodedata.combining(c))
-    s = s.lower()
-    # Map locale-specific letters
-    s = s.replace('ß', 'ss')
-    # Map gender symbols to letters to keep parity with English suggestions like "Nidoran M/F"
-    s = s.replace('♂', 'm').replace('♀', 'f')
-    # Remove any remaining non-alphanumeric characters
-    s = ''.join(ch for ch in s if ('a' <= ch <= 'z') or ('0' <= ch <= '9'))
-    return s
+from .text_utils import normalize_name
 
 
 
-def get_pokedex_entry(poke_id: int, lang: str) -> str:
-    """Fetch a Pokédex flavor text for given Pokémon id in the requested language.
-    Falls back to English, then to any available, and cleans whitespace/newlines.
-    """
-    try:
-        l = lang.lower() if isinstance(lang, str) else 'en'
-        if l not in SUPPORTED_LANGS:
-            l = 'en'
-        # species endpoint contains flavor_text_entries
-        url = f"{POKEAPI_BASE}/pokemon-species/{poke_id}"
-        r = requests.get(url, timeout=12)
-        r.raise_for_status()
-        j = r.json()
-        entries = j.get('flavor_text_entries', []) or []
-        def clean(txt: str) -> str:
-            if not isinstance(txt, str):
-                txt = str(txt or '')
-            # Replace form feed and newlines with spaces, compress spaces
-            txt = txt.replace('\f', ' ').replace('\n', ' ').replace('\r', ' ')
-            return ' '.join(txt.split())
-        # Try in preferred language
-        for e in entries:
-            lang_name = (e.get('language') or {}).get('name')
-            if lang_name == l and e.get('flavor_text'):
-                return clean(e['flavor_text'])
-        # Fallback to English
-        for e in entries:
-            lang_name = (e.get('language') or {}).get('name')
-            if lang_name == 'en' and e.get('flavor_text'):
-                return clean(e['flavor_text'])
-        # Any available
-        for e in entries:
-            if e.get('flavor_text'):
-                return clean(e['flavor_text'])
-        return ''
-    except Exception:
-        return ''
+from .entries import get_pokedex_entry
 
 
 # --- Variant/form guess resolution helpers ---

@@ -212,17 +212,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function newRoundScream() {
-    // Reset streak if previous round was not solved
-    if (state.roundActive && !state.roundSolved) {
-      if (state.streak !== 0) {
-        state.streak = 0;
-        state.score = 0;
-        saveStats();
-        updateHUD();
-      }
-    }
+    // Penalize abandoning an unsolved round in a unified way
+    if (typeof resetOnAbandon === 'function') { resetOnAbandon(); }
     state.roundActive = true;
     state.roundSolved = false;
+    state.revealed = false;
     state.attemptsWrong = 0;
     try { resetHints(); } catch(_) {}
     try {
@@ -232,11 +226,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (window.HintsUI && typeof HintsUI.syncRevealed === 'function') HintsUI.syncRevealed();
     } catch(_) {}
 
-    // Re-enable Guess button for a fresh round
-    try {
-      const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
-      if (guessBtn) { guessBtn.disabled = false; guessBtn.setAttribute('aria-disabled','false'); }
-    } catch(_) {}
+    // Re-enable Guess, Reveal and Input for a fresh round
+    try { if (typeof setRoundControlsDisabled === 'function') setRoundControlsDisabled(false); } catch(_) {}
 
     window.resetGuessed && window.resetGuessed();
 
@@ -302,7 +293,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (res.correct) {
-      if (!state.roundSolved) {
+      if (typeof awardCorrect === 'function') {
+        awardCorrect({ wrong: state.attemptsWrong || 0, mode: getGameId && getGameId() });
+      } else if (!state.roundSolved) {
         const wrong = state.attemptsWrong || 0;
         const points = Math.max(0, 100 - 25 * wrong);
         state.score = (state.score || 0) + points;
@@ -320,12 +313,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       } catch(_) {}
     } else {
       state.attemptsWrong = (state.attemptsWrong || 0) + 1;
-      // A wrong guess ends the current streak for this mode
-      if (state.streak !== 0) {
-        state.streak = 0;
-        saveStats();
-        updateHUD();
-      }
+      // A wrong guess ends the current streak (score unchanged)
+      if (typeof resetOnWrongGuess === 'function') { resetOnWrongGuess(); }
       fb.textContent = t('feedback.wrong');
       fb.className = 'feedback prominent incorrect';
       try { window.noteGuessed && window.noteGuessed(guess); } catch(_){ }
@@ -337,13 +326,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const fb = document.getElementById('feedback');
     fb.textContent = t('feedback.reveal', { name: state.answer });
     fb.className = 'feedback prominent reveal';
-    if (state.streak !== 0) {
-      state.streak = 0;
-      state.score = 0;
-      saveStats();
-      updateHUD();
-    }
-    state.roundSolved = false;
+    if (typeof resetOnReveal === 'function') { resetOnReveal(); }
   });
 
   document.getElementById('next-btn').addEventListener('click', () => {
