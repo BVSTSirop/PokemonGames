@@ -697,8 +697,9 @@ function normalizeName(s) {
   s = s.toLowerCase();
   // map common locale-specific letters
   s = s.replace(/ß/g, 'ss');
-  // remove gender symbols and any non-alphanumeric characters
-  s = s.replace(/[♂♀]/g, '');
+  // map gender symbols to letters to match English suggestions like "Nidoran M/F"
+  s = s.replace(/♂/g, 'm').replace(/♀/g, 'f');
+  // remove any remaining non-alphanumeric characters
   s = s.replace(/[^a-z0-9]/g, '');
   return s;
 }
