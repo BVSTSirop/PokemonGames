@@ -909,6 +909,15 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     try {
       const guessBtn = document.querySelector('#daily-form button[type="submit"], #guess-form button[type="submit"], form.guess-form button[type="submit"]');
       if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
+      // Also disable the input field for today
+      const input = document.getElementById('guess-input');
+      if (input) {
+        input.disabled = true;
+        input.setAttribute('aria-disabled','true');
+        try { input.blur(); } catch(_){}
+      }
+      try { if (typeof hideSuggestions === 'function') hideSuggestions(); } catch(_){}
+      try { if (typeof setRoundControlsDisabled === 'function') setRoundControlsDisabled(true); } catch(_){}
     } catch(_) {}
   }
 
@@ -973,6 +982,15 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       try {
         const guessBtn = document.querySelector('#daily-form button[type="submit"], #guess-form button[type="submit"], form.guess-form button[type="submit"]');
         if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
+        // Also disable the input field once solved
+        const input = document.getElementById('guess-input');
+        if (input) {
+          input.disabled = true;
+          input.setAttribute('aria-disabled','true');
+          try { input.blur(); } catch(_){}
+        }
+        try { if (typeof hideSuggestions === 'function') hideSuggestions(); } catch(_){}
+        try { if (typeof setRoundControlsDisabled === 'function') setRoundControlsDisabled(true); } catch(_){}
       } catch(_) {}
     } else {
       // Update attempts and reveal hints progressively
