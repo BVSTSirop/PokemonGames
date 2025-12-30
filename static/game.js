@@ -148,6 +148,17 @@ function setRoundControlsDisabled(disabled = true) {
   } catch (_) {}
 }
 
+// Enable/disable Next button consistently
+function setNextButtonDisabled(disabled = true) {
+  try {
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn) {
+      nextBtn.disabled = !!disabled;
+      nextBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    }
+  } catch(_) {}
+}
+
 // ----- Unified round reset helpers (reusable across all modes) -----
 // Called when a wrong guess happens: resets streak only (score unchanged), persists and updates HUD.
 function resetOnWrongGuess() {
@@ -169,6 +180,8 @@ function resetOnReveal() {
     state.roundSolved = false; // explicitly mark as not solved
     // End round interactions: disable Guess, Reveal and Input consistently
     try { setRoundControlsDisabled(true); } catch(_) {}
+    // Enable Next: round is ended via reveal
+    try { setNextButtonDisabled(false); } catch(_) {}
     // Mark round as no longer active (optional bookkeeping)
     try { state.roundActive = false; } catch(_) {}
     saveStats();
@@ -219,6 +232,8 @@ function awardCorrect({ wrong = 0, mode = getGameId() } = {}) {
   try { updateHUD(); } catch(_) {}
   // Disable further interaction until Next
   try { setRoundControlsDisabled(true); } catch(_) {}
+  // Enable Next: round completed
+  try { setNextButtonDisabled(false); } catch(_) {}
 }
 
 // Localized names cache per (lang|genCSV) key: { 'en|all' or 'en|1,3,5': [names...] }
@@ -574,6 +589,8 @@ async function newRound() {
   state.attemptsWrong = 0;
   // Re-enable Guess, Reveal and Input for a fresh round
   try { setRoundControlsDisabled(false); } catch(_) {}
+  // Disable Next until this round is completed
+  try { setNextButtonDisabled(true); } catch(_) {}
   // Reset hints for new round (legacy list + shared timeline)
   try { resetHints(); } catch(_) {}
   try {

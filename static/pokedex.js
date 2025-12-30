@@ -24,6 +24,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Re-enable Guess, Reveal and Input for a new round
     try { if (typeof setRoundControlsDisabled === 'function') setRoundControlsDisabled(false); } catch(_) {}
+    // Disable Next until round is completed
+    try { if (typeof setNextButtonDisabled === 'function') setNextButtonDisabled(true); } catch(_) {}
 
     // Reset guessed list UI
     try { window.resetGuessed && window.resetGuessed(); } catch(_){}

@@ -29,6 +29,8 @@
         state.revealed = false;
         state.attemptsWrong = 0;
       } catch(_) {}
+      // While a round is active, Next should be disabled
+      try { if (typeof setNextButtonDisabled === 'function') setNextButtonDisabled(true); } catch(_) {}
       try { setRoundControlsDisabled(false); } catch(_) {}
       // reset hints
       try { resetHints(); } catch(_) {}
@@ -64,6 +66,8 @@
         if (!state.roundActive || state.roundSolved || state.revealed) return;
         awardCorrect({ wrong: state.attemptsWrong || 0, mode: (typeof getGameId==='function'? getGameId() : 'global') });
       } catch(_) {}
+      // Round completed, enable Next
+      try { if (typeof setNextButtonDisabled === 'function') setNextButtonDisabled(false); } catch(_) {}
       if (typeof this._callbacks.onCorrect === 'function') {
         this._callbacks.onCorrect({ name: name || state.answer, payload: this._lastPayload });
       }
@@ -86,6 +90,8 @@
         if (!state.roundActive || state.roundSolved || state.revealed) return;
         showFeedback('reveal', (typeof t==='function'? t('feedback.reveal', { name: state.answer }) : `It was ${state.answer}`));
         resetOnReveal();
+        // Round ended via reveal; enable Next
+        try { if (typeof setNextButtonDisabled === 'function') setNextButtonDisabled(false); } catch(_) {}
       } catch(_) {}
       if (typeof this._callbacks.onReveal === 'function') {
         this._callbacks.onReveal({ answer: state.answer, payload: this._lastPayload });

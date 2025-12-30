@@ -103,6 +103,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch(_) {}
 
     try { if (typeof setRoundControlsDisabled === 'function') setRoundControlsDisabled(false); } catch(_) {}
+    try { if (typeof setNextButtonDisabled === 'function') setNextButtonDisabled(true); } catch(_) {}
 
     if (typeof window.resetGuessed === 'function') { try { window.resetGuessed(); } catch(_){} }
 
