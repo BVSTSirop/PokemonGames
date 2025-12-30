@@ -777,15 +777,6 @@ async function checkGuess(guess) {
   return { correct: !!r.correct, name: r.name };
 }
 
-// Simple debounce utility
-function debounce(fn, delay) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), delay);
-  };
-}
-
 function normalizeName(s) {
   if (typeof s !== 'string') s = String(s || '');
   s = s.normalize('NFKD');
@@ -816,73 +807,6 @@ async function preloadNames(lang) {
   return ALL_NAMES[key];
 }
 
-function renderSuggestions(items) {
-  const box = document.getElementById('suggestions');
-  box.innerHTML = '';
-  if (!items || items.length === 0) {
-    box.classList.remove('visible');
-    return;
-  }
-  items.forEach((n, idx) => {
-    const div = document.createElement('div');
-    div.className = 'suggestion-item';
-    div.setAttribute('role', 'option');
-    div.setAttribute('id', `sugg-${idx}`);
-    div.textContent = n;
-    div.addEventListener('mousedown', (e) => {
-      e.preventDefault(); // prevent input blur before click
-      selectSuggestion(n);
-    });
-    box.appendChild(div);
-  });
-  box.classList.add('visible');
-}
-
-function hideSuggestions() {
-  const box = document.getElementById('suggestions');
-  box.classList.remove('visible');
-  box.innerHTML = '';
-  document.getElementById('guess-input').setAttribute('aria-expanded', 'false');
-}
-
-let suggController = null;
-async function fetchSuggestions(query) {
-  const box = document.getElementById('suggestions');
-  if (!query) {
-    if (suggController) {
-      try { suggController.abort(); } catch (_) {}
-      suggController = null;
-    }
-    hideSuggestions();
-    return;
-  }
-  try {
-    // Ensure names are preloaded for current language
-    const names = await preloadNames(getLang());
-    const qn = normalizeName(query);
-    const starts = [];
-    const contains = [];
-    const exclude = (typeof window.getExcludeNames === 'function') ? window.getExcludeNames() : null;
-    for (const n of names) {
-      const nn = normalizeName(n);
-      if (exclude && exclude.has(nn)) continue;
-      if (nn.startsWith(qn)) {
-        starts.push(n);
-      } else if (nn.includes(qn)) {
-        contains.push(n);
-      }
-      if (starts.length >= 20) break;
-    }
-    const list = starts.length < 20 ? starts.concat(contains).slice(0, 20) : starts.slice(0, 20);
-    renderSuggestions(list);
-    document.getElementById('guess-input').setAttribute('aria-expanded', list && list.length ? 'true' : 'false');
-  } catch (_) {
-    hideSuggestions();
-  }
-}
-
-const debouncedSuggest = debounce((q) => fetchSuggestions(q), 250);
-
 function revealFullSprite() {
   const el = document.getElementById('sprite-crop');
   if (!el) return;
@@ -895,39 +819,7 @@ function revealFullSprite() {
   el.style.backgroundRepeat = 'no-repeat';
 }
 
-function selectSuggestion(text) {
-  const input = document.getElementById('guess-input');
-  input.value = text;
-  hideSuggestions();
-  input.focus();
-}
-
-function handleKeyNav(e) {
-  const box = document.getElementById('suggestions');
-  const items = Array.from(box.querySelectorAll('.suggestion-item'));
-  if (!box.classList.contains('visible') || items.length === 0) return;
-  const current = items.findIndex(i => i.classList.contains('active'));
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    const next = current < items.length - 1 ? current + 1 : 0;
-    items.forEach(i => i.classList.remove('active'));
-    items[next].classList.add('active');
-    items[next].scrollIntoView({ block: 'nearest' });
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    const prev = current > 0 ? current - 1 : items.length - 1;
-    items.forEach(i => i.classList.remove('active'));
-    items[prev].classList.add('active');
-    items[prev].scrollIntoView({ block: 'nearest' });
-  } else if (e.key === 'Enter') {
-    if (current >= 0) {
-      e.preventDefault();
-      selectSuggestion(items[current].textContent);
-    }
-  } else if (e.key === 'Escape') {
-    hideSuggestions();
-  }
-}
+// Suggestions logic has been moved to static/suggestions.js
 
 // Initialize the generation fancy dropdown on every page
 window.addEventListener('DOMContentLoaded', () => {
@@ -1062,11 +954,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   newRound();
 
   const inputEl = document.getElementById('guess-input');
-  inputEl.addEventListener('input', (e) => {
-    debouncedSuggest(e.target.value.trim());
-  });
-  inputEl.addEventListener('keydown', handleKeyNav);
-  inputEl.addEventListener('blur', () => setTimeout(hideSuggestions, 100));
+  if (inputEl && window.Suggestions){
+    try { Suggestions.init({ inputEl, getExcludeNames: () => (typeof window.getExcludeNames==='function' ? window.getExcludeNames() : new Set()) }); } catch(_) {}
+  }
 
   document.getElementById('guess-form').addEventListener('submit', async (e) => {
     e.preventDefault();

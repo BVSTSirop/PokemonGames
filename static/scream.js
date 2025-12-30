@@ -321,9 +321,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Suggestions
   const inputEl = document.getElementById('guess-input');
-  inputEl.addEventListener('input', (e) => { debouncedSuggest(e.target.value.trim()); });
-  inputEl.addEventListener('keydown', handleKeyNav);
-  inputEl.addEventListener('blur', () => setTimeout(hideSuggestions, 100));
+  if (inputEl && window.Suggestions){
+    try { Suggestions.init({ inputEl, getExcludeNames: () => (guessed ? guessed.set : new Set()) }); } catch(_) {}
+  }
 
   document.getElementById('guess-form').addEventListener('submit', async (e) => {
     e.preventDefault();

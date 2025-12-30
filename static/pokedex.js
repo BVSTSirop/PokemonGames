@@ -131,14 +131,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Bind form and controls (legacy)
   const inputEl = document.getElementById('guess-input');
-  if (inputEl) {
-    inputEl.addEventListener('input', (e) => {
-      if (typeof debouncedSuggest === 'function') debouncedSuggest(e.target.value.trim());
-    });
-    inputEl.addEventListener('keydown', (e) => {
-      if (typeof handleKeyNav === 'function') handleKeyNav(e);
-    });
-    inputEl.addEventListener('blur', () => setTimeout(() => { if (typeof hideSuggestions==='function') hideSuggestions(); }, 100));
+  if (inputEl && window.Suggestions){
+    try { Suggestions.init({ inputEl, getExcludeNames: () => (guessed ? guessed.set : new Set()) }); } catch(_) {}
   }
 
   const form = document.getElementById('guess-form');

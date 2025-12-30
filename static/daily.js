@@ -856,11 +856,22 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   }
 
   const inputEl = document.getElementById('guess-input');
-  inputEl.addEventListener('input', (e)=>{ if (typeof debouncedSuggest==='function') debouncedSuggest(e.target.value.trim()); });
-  if (typeof handleKeyNav === 'function') {
-    inputEl.addEventListener('keydown', handleKeyNav);
+  // Prefer unified Suggestions module; fallback to legacy lightweight listeners if unavailable
+  if (inputEl && window.Suggestions) {
+    try {
+      if (!inputEl.dataset.suggestionsWired) {
+        Suggestions.init({ inputEl, getExcludeNames: () => guessedTodaySet() });
+        inputEl.dataset.suggestionsWired = 'true';
+      }
+    } catch(_) {}
+  } else if (inputEl) {
+    // Fallback (should not be needed): delegate to global helpers if present
+    inputEl.addEventListener('input', (e)=>{ if (typeof debouncedSuggest==='function') debouncedSuggest(e.target.value.trim()); });
+    if (typeof handleKeyNav === 'function') {
+      inputEl.addEventListener('keydown', handleKeyNav);
+    }
+    inputEl.addEventListener('blur', ()=> setTimeout(()=>{ if (typeof hideSuggestions==='function') hideSuggestions(); }, 100));
   }
-  inputEl.addEventListener('blur', ()=> setTimeout(()=>{ if (typeof hideSuggestions==='function') hideSuggestions(); }, 100));
 
   document.getElementById('daily-form').addEventListener('submit', async (e)=>{
     e.preventDefault();

@@ -97,10 +97,12 @@
       // Inputs: suggestions and nav
       try {
         const inputEl = document.getElementById('guess-input');
-        if (inputEl){
-          inputEl.addEventListener('input', (e)=>{ try { debouncedSuggest(e.target.value.trim()); } catch(_) {} });
-          inputEl.addEventListener('keydown', (e)=>{ try { handleKeyNav(e); } catch(_) {} });
-          inputEl.addEventListener('blur', ()=> setTimeout(()=>{ try { hideSuggestions(); } catch(_) {} }, 100));
+        if (inputEl && window.Suggestions && !inputEl.dataset.suggestionsWired){
+          try {
+            const getEx = (typeof window.getExcludeNames === 'function') ? window.getExcludeNames : (() => new Set());
+            Suggestions.init({ inputEl, getExcludeNames: getEx });
+            inputEl.dataset.suggestionsWired = 'true';
+          } catch(_) {}
         }
       } catch(_) {}
       // Form submit: unified checkGuess flow
