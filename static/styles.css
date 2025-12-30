@@ -290,3 +290,17 @@ button:disabled:hover,
 button[aria-disabled="true"]:hover {
   filter: none;
 }
+
+/* --- Global modal --- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:100}
+/* Respect hidden/aria-hidden so the modal is not visible until explicitly shown */
+.modal-overlay[hidden],
+.modal-overlay[aria-hidden="true"]{display:none !important}
+.modal{background:#0c1330;border:1px solid #2b386f;border-radius:16px;box-shadow:var(--shadow);max-width:520px;width:calc(100% - 32px);padding:16px 16px 18px;position:relative}
+.modal-close{position:absolute;right:10px;top:10px;background:transparent;border:1px solid rgba(255,255,255,.15);color:#e6e9ff;border-radius:10px;font-size:18px;line-height:1;padding:6px 10px;cursor:pointer}
+.modal-content{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px}
+.modal-content .modal-title{font-family:"Luckiest Guy", system-ui; font-size:22px; color:#ffea61; margin:4px 0 2px}
+.modal-content .modal-msg{font-weight:800; color:#e6e9ff}
+.modal-content .modal-sprite{width:160px; height:160px; background-size:contain; background-repeat:no-repeat; background-position:center center; border-radius:12px; background-color:#0b1021; border:1px solid #27306a}
+/* Pokédex entry block inside modal */
+.modal-content .modal-entry{background:#0b1130;border:1px solid #27306a;border-radius:10px;padding:10px 12px;max-height:180px;overflow:auto;color:#e6e9ff;font-weight:700;text-align:left;width:100%}

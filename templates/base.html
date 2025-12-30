@@ -26,7 +26,7 @@
           <a href="/pixelate" {% if active_page=='pixelate' %}aria-current="page"{% endif %} data-i18n="nav.pixelate">Pixelate</a>
           <a href="/scream" {% if active_page=='scream' %}aria-current="page"{% endif %} data-i18n="nav.scream">Scream</a>
           <a href="/tcg" {% if active_page=='tcg' %}aria-current="page"{% endif %} data-i18n="nav.cards">Cards</a>
-          <a href="/pokedex" {% if active_page=='pokedex' %}aria-current="page"{% endif %} data-i18n="nav.pokedex">Pokedex</a>
+          <a href="/pokedex" {% if active_page=='pokedex' %}aria-current="page"{% endif %} data-i18n="nav.pokedex">Pokédex</a>
           <a href="/daily" {% if active_page=='daily' %}aria-current="page"{% endif %} data-i18n="nav.daily">Daily</a>
         </nav>
         <div class="lang-switcher">
@@ -82,6 +82,13 @@
       <p>Data from <a href="https://pokeapi.co/" target="_blank" rel="noopener">PokeAPI</a>. Not affiliated with Nintendo/Game Freak.</p>
     </div>
   </footer>
+  <!-- Global lightweight modal -->
+  <div id="app-modal" class="modal-overlay" hidden aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal" role="document">
+      <button type="button" class="modal-close" id="app-modal-close" aria-label="Close">×</button>
+      <div class="modal-content" id="app-modal-content"></div>
+    </div>
+  </div>
   <script>
     (function(){
       const btn = document.getElementById('menu-toggle');

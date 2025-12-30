@@ -12,6 +12,7 @@ from services.pokemon import (
     get_species_metadata,
     resolve_variant_guess_to_species_id,
 )
+from services.entries import get_pokedex_entry
 
 import requests
 import time
@@ -486,10 +487,16 @@ def api_daily_meta():
         meta = get_species_metadata(pid)
     except Exception:
         meta = {'color': '', 'generation': ''}
+    # Localized Pokédex entry (flavor text)
+    try:
+        entry = get_pokedex_entry(pid, lang) or ''
+    except Exception:
+        entry = ''
     return jsonify({
         'id': pid,
         'name': name,
         'sprite': sprite_url or '',
         'color': meta.get('color') or '',
         'generation': meta.get('generation') or '',
+        'entry': entry,
     })

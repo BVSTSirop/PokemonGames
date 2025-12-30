@@ -344,6 +344,56 @@ function renderRow(guess, animate = false){
   return tr;
 }
 
+// Show a congratulations popup with the sprite for the daily answer
+async function showDailyWinPopup(name, answerId){
+  try{
+    // Ensure metadata (including sprite) is present; use global export if available
+    try {
+      if (window.ensureDailyMetaLoaded) {
+        await window.ensureDailyMetaLoaded();
+      }
+    } catch(_){ }
+
+    let sprite = (state && state.meta && state.meta.sprite) ? state.meta.sprite : null;
+
+    // Fallback: if sprite is still missing on reload, fetch meta once directly
+    if (!sprite) {
+      try {
+        const lang = (typeof getLang === 'function') ? getLang() : 'en';
+        const res = await fetch(`/api/daily/meta?lang=${encodeURIComponent(lang)}`);
+        if (res && res.ok) {
+          const j = await res.json().catch(()=>null);
+          if (j && j.sprite) {
+            try { state.meta = Object.assign({}, state.meta, { id: j.id, sprite: j.sprite, color: j.color, generation: j.generation }); } catch(_){}
+            sprite = j.sprite;
+          }
+          // also ensure we have an answer string in state
+          try { if (!state.answer && j && j.name) state.answer = j.name; } catch(_){}
+        }
+      } catch(_){ }
+    }
+
+    const title = '🎉 Congratulations!';
+    const msg = (typeof t==='function'? t('daily.status.won', { name }) : `Congrats! It was ${name}. Come back tomorrow!`);
+    // Build optional Pokédex entry HTML if available
+    const entryText = (state && state.meta && state.meta.entry) ? state.meta.entry : '';
+    function esc(s){
+      try{
+        return String(s||'')
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/\"/g,'&quot;')
+          .replace(/'/g,'&#39;');
+      }catch(_){ return ''; }
+    }
+    const entryHtml = entryText ? `<div class="modal-entry">${esc(entryText)}</div>` : '';
+    if (typeof showModal === 'function'){
+      showModal({ title, message: msg, spriteUrl: sprite || null, html: entryHtml });
+    }
+  }catch(_){ }
+}
+
 async function submitGuess(text){
   const res = await fetch('/api/daily/guess', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -609,12 +659,17 @@ window.addEventListener('DOMContentLoaded', async ()=>{
           sprite: j.sprite,
           color: j.color,
           generation: j.generation,
+          entry: j.entry,
         });
       } catch(_){}
       dbgDailyHints('ensureDailyMetaLoaded(): applied', { hasAnswer: !!state.answer, hasSprite: !!(state.meta && state.meta.sprite), color: state.meta && state.meta.color, generation: state.meta && state.meta.generation });
       return true;
     }catch(_){ return false; }
   }
+
+  // Expose meta helpers globally for callers outside this closure
+  try { window.ensureDailyMetaLoaded = ensureDailyMetaLoaded; } catch(_){ }
+  try { window.fetchDailyMeta = fetchDailyMeta; } catch(_){ }
 
   // Bind timeline interactions unconditionally so clicks work even if meta fetch is slow
   function bindHintTimeline(){
@@ -846,6 +901,10 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   if (day.done && day.win){
     const msg = (typeof t==='function'? t('daily.status.won', { name: day.answer }):`Congrats! It was ${day.answer}. Come back tomorrow!`);
     statusText(msg, 'correct');
+    // Show congratulations popup with sprite when loading an already-solved day
+    try {
+      if (typeof showDailyWinPopup === 'function') showDailyWinPopup(day.answer, day.answer_id);
+    } catch(_){}
     // Disable Guess button if today's puzzle is already solved
     try {
       const guessBtn = document.querySelector('#daily-form button[type="submit"], #guess-form button[type="submit"], form.guess-form button[type="submit"]');
@@ -906,6 +965,10 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     if (res.correct){
       const msg = (typeof t==='function'? t('daily.status.won', { name: res.answer }):`Congrats! It was ${res.answer}. Come back tomorrow!`);
       statusText(msg, 'correct');
+      // Show congratulations popup with sprite on immediate win
+      try {
+        if (typeof showDailyWinPopup === 'function') showDailyWinPopup(res.answer, (res && res.guess && res.guess.species_id) ? res.guess.species_id : (day && day.answer_id));
+      } catch(_){}
       // Disable Guess button after today's correct answer
       try {
         const guessBtn = document.querySelector('#daily-form button[type="submit"], #guess-form button[type="submit"], form.guess-form button[type="submit"]');
@@ -958,6 +1021,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
           sprite: meta.sprite,
           color: meta.color,
           generation: meta.generation,
+          entry: meta.entry,
         });
         dbgDailyHints('init meta applied to state:', { hasAnswer: !!state.answer, hasSprite: !!(state.meta && state.meta.sprite), color: state.meta && state.meta.color, generation: state.meta && state.meta.generation });
       } catch(_){ }

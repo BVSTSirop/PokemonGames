@@ -70,6 +70,42 @@ function showFeedback(type, text){
   } catch(_) {}
 }
 
+// ----- Lightweight global modal helpers -----
+function hideModal(){
+  try{
+    const overlay = document.getElementById('app-modal');
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+  }catch(_){}
+}
+function showModal({ title, message, html, spriteUrl }){
+  try{
+    const overlay = document.getElementById('app-modal');
+    const content = document.getElementById('app-modal-content');
+    const closeBtn = document.getElementById('app-modal-close');
+    if (!overlay || !content) return;
+    // Build content
+    const parts = [];
+    if (title){ parts.push(`<div class="modal-title">${title}</div>`); }
+    if (spriteUrl){ parts.push(`<div class="modal-sprite" style="background-image:url('${spriteUrl}')"></div>`); }
+    if (message){ parts.push(`<div class="modal-msg">${message}</div>`); }
+    if (html){ parts.push(String(html)); }
+    content.innerHTML = parts.join('');
+    overlay.hidden = false;
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    // Wire closing (once)
+    if (closeBtn && !closeBtn.dataset.bound){
+      closeBtn.addEventListener('click', hideModal);
+      overlay.addEventListener('click', (e)=>{ if (e.target === overlay) hideModal(); });
+      document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') hideModal(); });
+      closeBtn.dataset.bound = '1';
+    }
+  }catch(_){}
+}
+
 // ----- Shared UI control toggles -----
 // Enable/disable Guess button, Reveal button, and input consistently across all modes
 function setRoundControlsDisabled(disabled = true) {

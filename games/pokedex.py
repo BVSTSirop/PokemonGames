@@ -25,7 +25,7 @@ TOKENS = {}  # token -> { 'name': str, 'id': int }
 
 @bp.route('/')
 def index():
-    return render_template('pokedex.html', active_page='entry')
+    return render_template('pokedex.html', active_page='pokedex')
 
 
 
