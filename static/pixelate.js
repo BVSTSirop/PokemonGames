@@ -8,27 +8,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLang(getLang());
   translatePage && translatePage();
 
-  // Guessed list for this round
-  const GUESSED = new Set();
-  function renderGuessed() {
-    const box = document.getElementById('guessed-list');
-    if (!box) return;
-    box.innerHTML = '';
-    for (const nn of GUESSED) {
-      const chip = document.createElement('span');
-      chip.className = 'guessed-chip';
-      const names = getCachedNames(getLang(), getGen()) || [];
-      const disp = names.find(n => normalizeName(n) === nn) || nn;
-      chip.textContent = disp;
-      box.appendChild(chip);
-    }
-  }
-  window.getExcludeNames = () => GUESSED;
-  window.resetGuessed = () => { GUESSED.clear(); renderGuessed(); };
-  window.noteGuessed = (name) => {
-    const nn = normalizeName(name);
-    if (!GUESSED.has(nn)) { GUESSED.add(nn); renderGuessed(); }
-  };
+  // Guessed list component
+  const guessed = (window.GuessedList && GuessedList.create({ containerId: 'guessed-list' })) || null;
+  window.getExcludeNames = () => (guessed ? guessed.set : new Set());
+  window.resetGuessed = () => { guessed && guessed.clear(); };
+  window.noteGuessed = (name) => { guessed && guessed.add(name); };
 
   // Stats and HUD
   loadStats();
@@ -58,7 +42,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
       window.resetGuessed && window.resetGuessed();
-      newRoundPixelate();
+      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
+      else { newRoundPixelate(); }
     });
   }
 
@@ -176,33 +161,59 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
     imageObj.src = data.sprite;
 
-    const fbEl = document.getElementById('feedback');
-    fbEl.textContent = '';
-    fbEl.className = 'feedback';
+    if (typeof showFeedback === 'function') showFeedback('info', '');
     const input = document.getElementById('guess-input');
     input.value = '';
     hideSuggestions();
   }
 
   async function doCheck(guess) {
-    try {
-      const res = await fetch('/api/check-guess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: state.token, guess, lang: getLang() })
-      });
-      let data = {};
-      try { data = await res.json(); } catch (_) { data = {}; }
-      if (!res.ok) {
-        return { error: data && data.error ? data.error : 'Request failed' };
-      }
-      return data;
-    } catch (e) {
-      return { error: 'Network error' };
-    }
+    const r = await (window.Api ? Api.checkGuess({ url: '/api/check-guess', token: state.token, guess, lang: getLang() }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+    if (!r.ok) return { error: r.error };
+    return { correct: !!r.correct, name: r.name };
   }
 
-  // Start first round
+  // If the new RoundEngine is available, use it and skip legacy wiring
+  if (window.RoundEngine) {
+    const frame = document.querySelector('.sprite-frame');
+    const fetchRound = async () => {
+      try { frame?.classList.add('loading'); } catch(_) {}
+      const r = await (window.Api ? Api.random({ kind: 'pixelate' }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+      if (!r.ok) { try { showFeedback('error', r.error || 'Failed to load'); } catch(_) {} ; return {}; }
+      const data = r.data;
+      return {
+        token: data.token,
+        name: data.name,
+        meta: { sprite: data.sprite, color: data.color, generation: data.generation },
+        payload: data
+      };
+    };
+    const onRoundLoaded = ({ payload }) => {
+      imageObj = new Image();
+      imageObj.crossOrigin = 'anonymous';
+      imageObj.onload = () => {
+        drawPixelated();
+        try { setTimeout(() => frame?.classList.remove('loading'), 200); } catch(_) {}
+      };
+      imageObj.onerror = () => {
+        clearCanvas();
+        const fbEl = document.getElementById('feedback');
+        if (typeof showFeedback === 'function') showFeedback('error', 'Failed to load image'); else { fbEl.textContent = 'Failed to load image'; fbEl.className = 'feedback prominent incorrect'; }
+        frame?.classList.remove('loading');
+      };
+      imageObj.src = payload.sprite;
+    };
+    const onCorrect = () => {
+      try { state.attemptsWrong = 999; } catch(_) {}
+      drawPixelated();
+    };
+    const onWrong = () => { drawPixelated(); try { maybeRevealHints(); } catch(_) {} };
+    const onReveal = () => { try { state.attemptsWrong = 999; } catch(_) {} ; drawPixelated(); };
+    RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    return; // skip legacy flow
+  }
+
+  // Start first round (legacy)
   newRoundPixelate();
 
   const inputEl = document.getElementById('guess-input');
@@ -222,17 +233,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!guess) return;
     const fb = document.getElementById('feedback');
     if (!state.token) {
-      fb.textContent = 'Loading… please try again in a moment.';
-      fb.className = 'feedback prominent';
+      if (typeof showFeedback === 'function') showFeedback('info', 'Loading… please try again in a moment.');
       return;
     }
-    fb.textContent = '';
-    fb.className = 'feedback';
+    if (typeof showFeedback === 'function') showFeedback('info', '');
 
     const data = await doCheck(guess);
     if (data && data.error) {
-      fb.textContent = data.error || 'Error';
-      fb.className = 'feedback prominent incorrect';
+      if (typeof showFeedback === 'function') showFeedback('error', data.error || 'Error');
       return;
     }
 
@@ -247,8 +255,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         saveStats();
         updateHUD();
       }
-      fb.textContent = `Correct! It was ${data.name}.`;
-      fb.className = 'feedback prominent correct';
+      if (typeof showFeedback === 'function') showFeedback('correct', `Correct! It was ${data.name}.`);
       try {
         const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
         if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
@@ -261,8 +268,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       // End streak upon wrong guess (score unchanged)
       if (typeof resetOnWrongGuess === 'function') { resetOnWrongGuess(); }
       window.noteGuessed && window.noteGuessed(guess);
-      fb.textContent = `Nope — try again.`;
-      fb.className = 'feedback prominent incorrect';
+      if (typeof showFeedback === 'function') showFeedback('wrong', `Nope — try again.`);
       refreshAfterWrongGuess();
     }
   });
@@ -272,9 +278,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Max detail
     state.attemptsWrong = PIXEL_STEPS.length - 1;
     drawPixelated();
-    const fb = document.getElementById('feedback');
-    fb.textContent = `Revealed: ${state.answer || ''}`;
-    fb.className = 'feedback prominent reveal';
+    if (typeof showFeedback === 'function') showFeedback('reveal', `Revealed: ${state.answer || ''}`);
     if (typeof resetOnReveal === 'function') { resetOnReveal(); }
   });
 

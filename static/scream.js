@@ -17,27 +17,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (_) {}
   translatePage();
 
-  // Local per-round guessed names
-  const SCREAM_GUESSED = new Set();
-  function renderGuessed() {
-    const box = document.getElementById('guessed-list');
-    if (!box) return;
-    box.innerHTML = '';
-    for (const nn of SCREAM_GUESSED) {
-      const chip = document.createElement('span');
-      chip.className = 'guessed-chip';
-      const names = getCachedNames(getLang(), getGen()) || [];
-      const disp = names.find(n => normalizeName(n) === nn) || nn;
-      chip.textContent = disp;
-      box.appendChild(chip);
-    }
-  }
-  window.getExcludeNames = () => SCREAM_GUESSED;
-  window.resetGuessed = () => { SCREAM_GUESSED.clear(); renderGuessed(); };
-  window.noteGuessed = (name) => {
-    const nn = normalizeName(name);
-    if (!SCREAM_GUESSED.has(nn)) { SCREAM_GUESSED.add(nn); renderGuessed(); }
-  };
+  // Guessed list component
+  const guessed = (window.GuessedList && GuessedList.create({ containerId: 'guessed-list' })) || null;
+  window.getExcludeNames = () => (guessed ? guessed.set : new Set());
+  window.resetGuessed = () => { guessed && guessed.clear(); };
+  window.noteGuessed = (name) => { guessed && guessed.add(name); };
 
   // Stats and HUD
   loadStats();
@@ -67,7 +51,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
       window.resetGuessed && window.resetGuessed();
-      newRoundScream();
+      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
+      else { newRoundScream(); }
     });
   }
 
@@ -108,6 +93,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   let analyser = null;
   let sourceNode = null;
   let rafId = null;
+  let audioWired = false;
 
   function setPlayState(stateStr) {
     // stateStr: 'play' | 'pause' | 'replay'
@@ -121,6 +107,46 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else {
       playBtn.textContent = t('scream.play');
       playBtn.setAttribute('aria-label', t('scream.play'));
+    }
+  }
+
+  // Wire audio controls and visualization listeners once
+  function wireAudioControls(){
+    if (audioWired) return;
+    audioWired = true;
+
+    // Audio events & controls
+    audioEl.addEventListener('play', async () => {
+      setPlayState('pause');
+      ensureAudioGraph();
+      try { await audioCtx.resume?.(); } catch(_) {}
+      stopDrawing();
+      draw();
+    });
+    audioEl.addEventListener('pause', () => {
+      setPlayState('play');
+      stopDrawing();
+    });
+    audioEl.addEventListener('ended', () => {
+      setPlayState('replay');
+      stopDrawing();
+    });
+
+    if (canvasWrap) {
+      canvasWrap.addEventListener('click', seekFromCanvas);
+    } else if (canvas) {
+      canvas.addEventListener('click', seekFromCanvas);
+    }
+
+    if (playBtn) {
+      playBtn.addEventListener('click', async () => {
+        if (!audioEl.src) return;
+        if (audioEl.paused || audioEl.ended) {
+          try { await audioEl.play(); } catch (_) {}
+        } else {
+          audioEl.pause();
+        }
+      });
     }
   }
 
@@ -248,25 +274,49 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('feedback').className = 'feedback';
   }
 
-  async function checkGuessScream(guess) {
-    try {
-      const res = await fetch('/api/scream/check-guess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: state.token, guess, lang: getLang() })
-      });
-      let data = {};
-      try { data = await res.json(); } catch (_) { data = {}; }
-      if (!res.ok) {
-        return { error: data && data.error ? data.error : 'Request failed' };
-      }
-      return data;
-    } catch (e) {
-      return { error: 'Network error' };
-    }
+  // Legacy helper removed; unified /api/check-guess is used everywhere via Api.checkGuess
+
+  // If the new RoundEngine is available, use it and skip legacy wiring
+  if (window.RoundEngine) {
+    const frame = document.querySelector('.sprite-frame');
+    const fetchRound = async () => {
+      try { frame?.classList.add('loading'); } catch(_) {}
+      const r = await (window.Api ? Api.random({ kind: 'scream' }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+      if (!r.ok) { try { showFeedback('error', r.error || 'Failed to load'); } catch(_) {} ; return {}; }
+      const data = r.data;
+      return {
+        token: data.token,
+        name: data.name,
+        meta: { color: data.color, generation: data.generation },
+        payload: data
+      };
+    };
+    const onRoundLoaded = ({ payload }) => {
+      try {
+        stopDrawing();
+      } catch(_) {}
+      setPlayState('play');
+      audioEl.src = payload.audio || '';
+      try { setTimeout(() => frame?.classList.remove('loading'), 200); } catch(_) {}
+      // Ensure canvas reset
+      try { clearCanvas(); } catch(_) {}
+    };
+    const onCorrect = () => {
+      // No special visuals; feedback handled by engine
+    };
+    const onWrong = () => {
+      // No extra visuals; hints handled by engine
+    };
+    const onReveal = () => {
+      // On reveal, keep audio state unchanged
+    };
+    // Ensure audio controls are wired when using the engine
+    try { wireAudioControls(); } catch(_) {}
+    RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    return; // skip legacy flow
   }
 
-  // Start first round
+  // Start first round (legacy)
   await newRoundScream();
 
   // Suggestions
@@ -282,17 +332,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     const fb = document.getElementById('feedback');
     // Prevent early submissions before the round token is ready
     if (!state.token) {
-      fb.textContent = 'Loading… please try again in a moment.';
-      fb.className = 'feedback prominent';
+      if (typeof showFeedback === 'function') showFeedback('info', 'Loading… please try again in a moment.');
       return;
     }
-    const res = await checkGuessScream(guess);
-    if (res && res.error) {
-      fb.textContent = res.error;
-      fb.className = 'feedback prominent';
-      return;
-    }
-    if (res.correct) {
+    const r = await (window.Api ? Api.checkGuess({ url: '/api/check-guess', token: state.token, guess, lang: getLang() }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+    if (!r.ok) { if (typeof showFeedback === 'function') showFeedback('error', r.error); return; }
+    if (r.correct) {
       if (typeof awardCorrect === 'function') {
         awardCorrect({ wrong: state.attemptsWrong || 0, mode: getGameId && getGameId() });
       } else if (!state.roundSolved) {
@@ -304,8 +349,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         saveStats();
         updateHUD();
       }
-      fb.textContent = t('feedback.correct', { name: res.name });
-      fb.className = 'feedback prominent correct';
+      if (typeof showFeedback === 'function') showFeedback('correct', t('feedback.correct', { name: r.name }));
       // Disable Guess button after a correct answer
       try {
         const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
@@ -315,17 +359,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.attemptsWrong = (state.attemptsWrong || 0) + 1;
       // A wrong guess ends the current streak (score unchanged)
       if (typeof resetOnWrongGuess === 'function') { resetOnWrongGuess(); }
-      fb.textContent = t('feedback.wrong');
-      fb.className = 'feedback prominent incorrect';
+      if (typeof showFeedback === 'function') showFeedback('wrong', t('feedback.wrong'));
       try { window.noteGuessed && window.noteGuessed(guess); } catch(_){ }
       try { maybeRevealHints(); } catch(_) {}
     }
   });
 
   document.getElementById('reveal-btn').addEventListener('click', () => {
-    const fb = document.getElementById('feedback');
-    fb.textContent = t('feedback.reveal', { name: state.answer });
-    fb.className = 'feedback prominent reveal';
+    if (typeof showFeedback === 'function') showFeedback('reveal', t('feedback.reveal', { name: state.answer }));
     if (typeof resetOnReveal === 'function') { resetOnReveal(); }
   });
 
@@ -333,35 +374,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     newRoundScream();
   });
 
-  // Audio events & controls
-  audioEl.addEventListener('play', async () => {
-    setPlayState('pause');
-    ensureAudioGraph();
-    try { await audioCtx.resume?.(); } catch(_) {}
-    stopDrawing();
-    draw();
-  });
-  audioEl.addEventListener('pause', () => {
-    setPlayState('play');
-    stopDrawing();
-  });
-  audioEl.addEventListener('ended', () => {
-    setPlayState('replay');
-    stopDrawing();
-  });
-
-  if (canvasWrap) {
-    canvasWrap.addEventListener('click', seekFromCanvas);
-  } else if (canvas) {
-    canvas.addEventListener('click', seekFromCanvas);
-  }
-
-  playBtn.addEventListener('click', async () => {
-    if (!audioEl.src) return;
-    if (audioEl.paused || audioEl.ended) {
-      try { await audioEl.play(); } catch (_) {}
-    } else {
-      audioEl.pause();
-    }
-  });
+  // Legacy path: wire audio controls if not already
+  try { wireAudioControls(); } catch(_) {}
 });

@@ -55,6 +55,21 @@ function updateHUD() {
   if (stEl) stEl.textContent = String(state.streak || 0);
 }
 
+// ----- Unified feedback helper -----
+// Applies consistent classes and text content for feedback area
+function showFeedback(type, text){
+  try {
+    const fb = document.getElementById('feedback');
+    if (!fb) return;
+    fb.textContent = String(text || '');
+    let cls = 'feedback prominent';
+    if (type === 'correct') cls += ' correct';
+    else if (type === 'wrong') cls += ' incorrect';
+    else if (type === 'reveal') cls += ' reveal';
+    fb.className = cls;
+  } catch(_) {}
+}
+
 // ----- Shared UI control toggles -----
 // Enable/disable Guess button, Reveal button, and input consistently across all modes
 function setRoundControlsDisabled(disabled = true) {
@@ -748,9 +763,7 @@ async function newRound() {
   // Force reflow to apply styles without transition, then allow transitions again
   void el.offsetWidth;
   el.classList.remove('no-anim');
-  const fbEl = document.getElementById('feedback');
-  fbEl.textContent = '';
-  fbEl.className = 'feedback';
+  try { if (typeof showFeedback === 'function') showFeedback('info', ''); } catch(_) {}
   const input = document.getElementById('guess-input');
   input.value = '';
   hideSuggestions();
@@ -759,21 +772,9 @@ async function newRound() {
 }
 
 async function checkGuess(guess) {
-  try {
-    const res = await fetch('/api/check-guess', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: state.token, guess, lang: getLang() })
-    });
-    let data = {};
-    try { data = await res.json(); } catch (_) { data = {}; }
-    if (!res.ok) {
-      return { error: data && data.error ? data.error : 'Request failed' };
-    }
-    return data;
-  } catch (e) {
-    return { error: 'Network error' };
-  }
+  const r = await (window.Api ? Api.checkGuess({ url: '/api/check-guess', token: state.token, guess, lang: getLang() }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+  if (!r.ok) return { error: r.error };
+  return { correct: !!r.correct, name: r.name };
 }
 
 // Simple debounce utility
@@ -933,6 +934,25 @@ window.addEventListener('DOMContentLoaded', () => {
   try { initGenDropdown(); } catch (_) {}
 });
 
+// Globally clear the guess input on submit across all modes (common behavior)
+// Use a microtask to avoid clearing before per-mode handlers read the value
+window.addEventListener('DOMContentLoaded', () => {
+  try {
+    const form = document.getElementById('guess-form');
+    if (!form) return;
+    form.addEventListener('submit', () => {
+      try {
+        const input = document.getElementById('guess-input');
+        if (!input) return;
+        setTimeout(() => {
+          input.value = '';
+          try { hideSuggestions(); } catch(_) {}
+        }, 0);
+      } catch(_) {}
+    });
+  } catch(_) {}
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
   // Only initialize on pages that have the sprite game section
   if (!document.querySelector('[data-game="sprite"]')) {
@@ -942,28 +962,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLang(getLang());
   translatePage();
 
-  // Guessed names for this round and helpers for suggestions to exclude them
-  const SPRITE_GUESSED = new Set();
-  function renderGuessed() {
-    const box = document.getElementById('guessed-list');
-    if (!box) return;
-    box.innerHTML = '';
-    for (const nn of SPRITE_GUESSED) {
-      const chip = document.createElement('span');
-      chip.className = 'guessed-chip';
-      // Find display name from cached names (try to match original case)
-      const names = getCachedNames(getLang(), getGen()) || [];
-      const disp = names.find(n => normalizeName(n) === nn) || nn;
-      chip.textContent = disp;
-      box.appendChild(chip);
-    }
-  }
-  window.getExcludeNames = () => SPRITE_GUESSED;
-  window.resetGuessed = () => { SPRITE_GUESSED.clear(); renderGuessed(); };
-  window.noteGuessed = (name) => {
-    const nn = normalizeName(name);
-    if (!SPRITE_GUESSED.has(nn)) { SPRITE_GUESSED.add(nn); renderGuessed(); }
-  };
+  // Guessed list component (switch to shared component)
+  const guessed = (window.GuessedList && GuessedList.create({ containerId: 'guessed-list' })) || null;
+  window.getExcludeNames = () => (guessed ? guessed.set : new Set());
+  window.resetGuessed = () => { guessed && guessed.clear(); };
+  window.noteGuessed = (name) => { guessed && guessed.add(name); };
 
   // Load stats and update HUD
   loadStats();
@@ -981,7 +984,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
       // Re-render guessed chips with possibly localized names
-      renderGuessed();
+      try { guessed && guessed.render && guessed.render(); } catch(_) {}
+      // If using engine, advance to a fresh round in new language
+      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
     });
   }
   // Hook up generation selector
@@ -996,8 +1001,61 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Reset guessed list as pool changed
       window.resetGuessed && window.resetGuessed();
       // Start a fresh round in the selected generation(s)
-      newRound();
+      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} } else { newRound(); }
     });
+  }
+
+  // If RoundEngine is available, use it and skip legacy listeners
+  if (window.RoundEngine) {
+    const frame = document.querySelector('.sprite-frame');
+    const fetchRound = async () => {
+      try { frame?.classList.add('loading'); } catch(_) {}
+      const r = await (window.Api ? Api.random({ kind: 'sprite' }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+      if (!r.ok) { try { showFeedback('error', r.error || 'Failed to load'); } catch(_) {} ; return {}; }
+      const data = r.data;
+      return {
+        token: data.token,
+        name: data.name,
+        meta: { id: data.id, color: data.color, generation: data.generation, sprite: data.sprite },
+        payload: data
+      };
+    };
+    const onRoundLoaded = ({ payload }) => {
+      try {
+        const el = document.getElementById('sprite-crop');
+        el.classList.remove('revealed');
+        el.classList.add('no-anim');
+        el.style.backgroundImage = `url(${payload.sprite})`;
+        el.style.backgroundSize = payload.bg_size;
+        el.style.backgroundPosition = payload.bg_pos;
+        void el.offsetWidth;
+        el.classList.remove('no-anim');
+        setTimeout(() => frame?.classList.remove('loading'), 200);
+      } catch(_) {}
+    };
+    const onCorrect = () => { try { revealFullSprite(); } catch(_) {} };
+    const onWrong = () => {
+      try {
+        const el = document.getElementById('sprite-crop');
+        if (!el) return;
+        el.classList.remove('revealed');
+        const cur = window.getComputedStyle(el).backgroundSize;
+        if (cur !== 'contain') {
+          const parts = cur.split(' ');
+          const parsePct = (s) => { const v = parseFloat(s); return isNaN(v) ? null : v; };
+          const w = parsePct(parts[0]);
+          const h = parsePct(parts[1] || parts[0]);
+          if (w && h) {
+            const newW = Math.max(100, w - 25);
+            const newH = Math.max(100, h - 25);
+            el.style.backgroundSize = `${newW}% ${newH}%`;
+          }
+        }
+      } catch(_) {}
+    };
+    const onReveal = () => { try { revealFullSprite(); } catch(_) {} };
+    RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    return; // skip legacy flow
   }
 
   // Start a new round
@@ -1017,22 +1075,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     const fb = document.getElementById('feedback');
     // Prevent early submissions before the round token is ready
     if (!state.token) {
-      fb.textContent = 'Loading… please try again in a moment.';
-      fb.className = 'feedback prominent';
+      if (typeof showFeedback === 'function') showFeedback('info', 'Loading… please try again in a moment.');
       return;
     }
     const res = await checkGuess(guess);
     if (res && res.error) {
       // Surface server/network errors without penalizing the player
-      fb.textContent = res.error;
-      fb.className = 'feedback prominent';
+      if (typeof showFeedback === 'function') showFeedback('error', res.error);
       return;
     }
     if (res.correct) {
       // Award points only the first time the round is solved (centralized logic)
       awardCorrect({ wrong: state.attemptsWrong || 0, mode: getGameId() });
-      fb.textContent = t('feedback.correct', { name: res.name });
-      fb.className = 'feedback prominent correct';
+      if (typeof showFeedback === 'function') showFeedback('correct', t('feedback.correct', { name: res.name }));
       // Disable Guess button after a correct answer
       try {
         const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
@@ -1045,8 +1100,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Wrong guess ends streak but keeps score
       try { resetOnWrongGuess(); } catch(_) {}
       // Feedback message for wrong guess
-      fb.textContent = t('feedback.wrong');
-      fb.className = 'feedback prominent incorrect';
+      if (typeof showFeedback === 'function') showFeedback('wrong', t('feedback.wrong'));
       // Maybe reveal textual hints after certain wrong attempts
       try { maybeRevealHints(); } catch(_) {}
       // Note guessed name so it appears in the list and is removed from suggestions
@@ -1076,9 +1130,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('reveal-btn').addEventListener('click', () => {
-    const fb = document.getElementById('feedback');
-    fb.textContent = t('feedback.reveal', { name: state.answer });
-    fb.className = 'feedback prominent reveal';
+    if (typeof showFeedback === 'function') showFeedback('reveal', t('feedback.reveal', { name: state.answer }));
     revealFullSprite();
     // Standardized reveal handling
     resetOnReveal();

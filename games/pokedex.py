@@ -15,6 +15,7 @@ from services.pokemon import (
     resolve_variant_guess_to_species_id,
 )
 from services.tokens import sign_token as _sign_token, verify_token as _verify_token
+from .common import build_aliases
 
 bp = Blueprint('pokedex', __name__, url_prefix='/pokedex')
 
@@ -74,104 +75,4 @@ def random_entry():
         return jsonify({"error": str(e)}), 500
 
 
-@bp.route('/api/check-guess', methods=['POST'])
-def check_guess():
-    data = request.get_json(silent=True) or {}
-    token = data.get('token')
-    guess = data.get('guess', '')
-    lang = (data.get('lang') or 'en').lower()
-    if lang not in SUPPORTED_LANGS:
-        lang = 'en'
-
-    # Resolve token: accept legacy in-memory tokens or stateless signed tokens
-    answer = None
-    if token and token in TOKENS:
-        answer = TOKENS.get(token)
-    else:
-        pid = _verify_token(token) if token else None
-        if pid is not None:
-            display_en = None
-            slug = None
-            for p in get_pokemon_list():
-                if p['id'] == pid:
-                    display_en = p['display_en']
-                    slug = p['slug']
-                    break
-            if pid and (display_en or slug):
-                answer = {'id': pid, 'name': slug or display_en}
-    if not answer:
-        return jsonify({"error": "Invalid token"}), 400
-
-    guess_norm = normalize_name(guess)
-
-    # Build a robust alias set like sprite game
-    aliases = set()
-
-    if answer.get('name'):
-        aliases.add(normalize_name(answer['name']))
-
-    display_en = None
-    for p in get_pokemon_list():
-        if p['id'] == answer['id']:
-            display_en = p['display_en']
-            break
-    if display_en:
-        aliases.add(normalize_name(display_en))
-
-    try:
-        localized = get_localized_name(answer['id'], lang)
-    except Exception:
-        localized = display_en or answer.get('name')
-    if localized:
-        aliases.add(normalize_name(localized))
-
-    if guess_norm in aliases:
-        return jsonify({'correct': True, 'name': localized})
-
-    try:
-        # Ensure language cache and retry once
-        from services.pokemon import ensure_language_filled as _ensure
-        _ensure(lang)
-        try:
-            localized2 = get_localized_name(answer['id'], lang)
-            aliases.add(normalize_name(localized2))
-            localized = localized2 or localized
-        except Exception:
-            pass
-    except Exception:
-        pass
-    if guess_norm in aliases:
-        return jsonify({'correct': True, 'name': localized})
-
-    for l in SUPPORTED_LANGS:
-        try:
-            nm = get_localized_name(answer['id'], l)
-            if nm:
-                nn = normalize_name(nm)
-                aliases.add(nn)
-                if guess_norm == nn:
-                    try:
-                        localized_final = get_localized_name(answer['id'], lang)
-                    except Exception:
-                        localized_final = nm
-                    return jsonify({'correct': True, 'name': localized_final})
-        except Exception:
-            continue
-
-    # Variant/form fallback: accept if guess maps to same species
-    try:
-        sid = resolve_variant_guess_to_species_id(guess)
-        if isinstance(sid, int) and sid == answer['id']:
-            try:
-                localized_final = get_localized_name(answer['id'], lang)
-            except Exception:
-                localized_final = display_en or answer.get('name')
-            return jsonify({'correct': True, 'name': localized_final})
-    except Exception:
-        pass
-
-    try:
-        localized = get_localized_name(answer['id'], lang)
-    except Exception:
-        localized = display_en or answer.get('name')
-    return jsonify({'correct': False, 'name': localized})
+# Removed per-mode check-guess route; all clients must use POST /api/check-guess

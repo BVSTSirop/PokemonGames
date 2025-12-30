@@ -7,27 +7,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   setLang(getLang());
   translatePage && translatePage();
 
-  // Per-round guessed names (to match other games' UX)
-  const TCG_GUESSED = new Set();
-  function renderGuessed() {
-    const box = document.getElementById('guessed-list');
-    if (!box) return;
-    box.innerHTML = '';
-    for (const nn of TCG_GUESSED) {
-      const chip = document.createElement('span');
-      chip.className = 'guessed-chip';
-      const names = getCachedNames(getLang(), getGen()) || [];
-      const disp = names.find(n => normalizeName(n) === nn) || nn;
-      chip.textContent = disp;
-      box.appendChild(chip);
-    }
-  }
-  window.getExcludeNames = () => TCG_GUESSED;
-  window.resetGuessed = () => { TCG_GUESSED.clear(); renderGuessed(); };
-  window.noteGuessed = (name) => {
-    const nn = normalizeName(name);
-    if (!TCG_GUESSED.has(nn)) { TCG_GUESSED.add(nn); renderGuessed(); }
-  };
+  // Guessed list component
+  const guessed = (window.GuessedList && GuessedList.create({ containerId: 'guessed-list' })) || null;
+  window.getExcludeNames = () => (guessed ? guessed.set : new Set());
+  window.resetGuessed = () => { guessed && guessed.clear(); };
+  window.noteGuessed = (name) => { guessed && guessed.add(name); };
 
   // Stats and HUD
   loadStats();
@@ -57,7 +41,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       hideSuggestions();
       try { await preloadNames(getLang()); } catch (_) {}
       window.resetGuessed && window.resetGuessed();
-      newRoundTCG();
+      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
+      else { newRoundTCG(); }
     });
   }
 
@@ -102,9 +87,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     setCardBlur(0); // 0 wrong attempts at round start => max blur
     void el.offsetWidth;
     el.classList.remove('no-anim');
-    const fbEl = document.getElementById('feedback');
-    fbEl.textContent = '';
-    fbEl.className = 'feedback';
+    if (typeof showFeedback === 'function') showFeedback('info', '');
     const input = document.getElementById('guess-input');
     input.value = '';
     hideSuggestions();
@@ -128,24 +111,51 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function doCheck(guess) {
-    try {
-      const res = await fetch('/api/check-guess', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: state.token, guess, lang: getLang() })
-      });
-      let data = {};
-      try { data = await res.json(); } catch (_) { data = {}; }
-      if (!res.ok) {
-        return { error: data && data.error ? data.error : 'Request failed' };
-      }
-      return data;
-    } catch (e) {
-      return { error: 'Network error' };
-    }
+    const r = await (window.Api ? Api.checkGuess({ url: '/api/check-guess', token: state.token, guess, lang: getLang() }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+    if (!r.ok) return { error: r.error };
+    return { correct: !!r.correct, name: r.name };
   }
 
-  // Start first round
+  // If the new RoundEngine is available, use it and skip legacy wiring
+  if (window.RoundEngine) {
+    const frame = document.querySelector('.sprite-frame');
+    const fetchRound = async () => {
+      try { frame?.classList.add('loading'); } catch(_) {}
+      const r = await (window.Api ? Api.random({ kind: 'tcg' }) : Promise.resolve({ ok:false, error:'API unavailable' }));
+      if (!r.ok) { try { showFeedback('error', r.error || 'Failed to load'); } catch(_) {} ; return {}; }
+      const data = r.data;
+      return {
+        token: data.token,
+        name: data.name,
+        meta: { image: data.image, color: data.color, generation: data.generation },
+        payload: data
+      };
+    };
+    const onRoundLoaded = ({ payload }) => {
+      const el = document.getElementById('card-crop');
+      try {
+        el.classList.remove('revealed');
+        el.classList.add('no-anim');
+        el.style.backgroundImage = `url(${payload.image})`;
+        el.style.backgroundSize = payload.bg_size || 'contain';
+        el.style.backgroundPosition = payload.bg_pos || 'center center';
+        setCardBlur(0);
+        void el.offsetWidth;
+        el.classList.remove('no-anim');
+        setTimeout(() => frame?.classList.remove('loading'), 200);
+      } catch(_) {}
+    };
+    const onCorrect = () => {
+      const el = document.getElementById('card-crop');
+      try { el.style.filter = ''; el.style.backgroundSize = 'contain'; el.style.backgroundPosition = 'center center'; } catch(_) {}
+    };
+    const onWrong = () => { try { setCardBlur((state.attemptsWrong||0)); } catch(_) {} };
+    const onReveal = () => { const el = document.getElementById('card-crop'); try { el.style.filter=''; el.style.backgroundSize='contain'; el.style.backgroundPosition='center center'; } catch(_) {} };
+    RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    return; // skip legacy flow
+  }
+
+  // Start first round (legacy)
   newRoundTCG();
 
   const inputEl = document.getElementById('guess-input');
@@ -160,25 +170,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     const fb = document.getElementById('feedback');
     // Do not penalize duplicate guesses; match behavior of other games
     const nn = normalizeName(guess);
-    if (typeof TCG_GUESSED !== 'undefined' && TCG_GUESSED.has(nn)) {
-      fb.textContent = 'Already guessed that — try a different Pokémon.';
-      fb.className = 'feedback prominent';
+    if (guessed && guessed.has(guess)) {
+      if (typeof showFeedback === 'function') showFeedback('info', 'Already guessed that — try a different Pokémon.');
       return;
     }
     if (!state.token) {
-      fb.textContent = 'Loading… please try again in a moment.';
-      fb.className = 'feedback prominent';
+      if (typeof showFeedback === 'function') showFeedback('info', 'Loading… please try again in a moment.');
       return;
     }
-    fb.textContent = '';
-    fb.className = 'feedback';
+    if (typeof showFeedback === 'function') showFeedback('info', '');
 
     const data = await doCheck(guess);
-    if (data && data.error) {
-      fb.textContent = data.error || 'Error';
-      fb.className = 'feedback prominent incorrect';
-      return;
-    }
+    if (data && data.error) { if (typeof showFeedback === 'function') showFeedback('error', data.error || 'Error'); return; }
 
     if (data.correct) {
       if (typeof awardCorrect === 'function') {
@@ -191,8 +194,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         saveStats();
         updateHUD();
       }
-      fb.textContent = `Correct! It was ${data.name}.`;
-      fb.className = 'feedback prominent correct';
+      if (typeof showFeedback === 'function') showFeedback('correct', `Correct! It was ${data.name}.`);
       try {
         const guessBtn = document.querySelector('#guess-form button[type="submit"], form.guess-form button[type="submit"]');
         if (guessBtn) { guessBtn.disabled = true; guessBtn.setAttribute('aria-disabled','true'); }
@@ -207,8 +209,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       setCardBlur(state.attemptsWrong);
       if (typeof resetOnWrongGuess === 'function') { resetOnWrongGuess(); }
       window.noteGuessed && window.noteGuessed(guess);
-      fb.textContent = `Nope — try again.`;
-      fb.className = 'feedback prominent incorrect';
+      if (typeof showFeedback === 'function') showFeedback('wrong', `Nope — try again.`);
       try { maybeRevealHints(); } catch(_) {}
     }
   });
@@ -219,9 +220,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     el.style.filter = '';
     el.style.backgroundSize = 'contain';
     el.style.backgroundPosition = 'center center';
-    const fb = document.getElementById('feedback');
-    fb.textContent = `Revealed: ${state.answer || ''}`;
-    fb.className = 'feedback prominent reveal';
+    if (typeof showFeedback === 'function') showFeedback('reveal', `Revealed: ${state.answer || ''}`);
     if (typeof resetOnReveal === 'function') { resetOnReveal(); }
   });
 
