@@ -18,34 +18,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadStats();
   updateHUD();
 
-  // Preload names for current language
-  try { await preloadNames(getLang()); } catch (_) {}
-
-  const langSel = document.getElementById('lang-select');
-  if (langSel) {
-    langSel.value = getLang();
-    langSel.addEventListener('change', async () => {
-      setLang(langSel.value);
-      translatePage && translatePage();
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      renderGuessed();
-    });
-  }
-
-  const genSel = document.getElementById('gen-select');
-  if (genSel) {
-    setGenSelectValue(genSel, getGen());
-    genSel.addEventListener('change', async () => {
-      const csv = readGenSelect(genSel);
-      setGen(csv);
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      window.resetGuessed && window.resetGuessed();
-      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
-      else { newRoundPixelate(); }
-    });
-  }
+  // Centralized wiring via initMode
+  try { initMode({ id: 'pixelate' }); } catch(_) {}
 
   // Pixelation control
   const PIXEL_STEPS = [64, 48, 32, 24, 16, 12, 8, 6, 4, 3, 2, 1]; // block sizes in CSS pixels
@@ -210,6 +184,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const onWrong = () => { drawPixelated(); try { maybeRevealHints(); } catch(_) {} };
     const onReveal = () => { try { state.attemptsWrong = 999; } catch(_) {} ; drawPixelated(); };
     RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    try { initMode({ id: 'pixelate' }); } catch(_) {}
     return; // skip legacy flow
   }
 

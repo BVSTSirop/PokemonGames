@@ -362,10 +362,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 
   // Initialize language and UI
   setLang(getLang());
-  // Merge Daily page translations into global I18N if available (from game.js)
-  try {
-    Object.keys(I18N_DAILY).forEach(l => { Object.assign(I18N[l] = I18N[l] || {}, I18N_DAILY[l]); });
-  } catch (_) {}
+  // Register Daily page translations using centralized i18n
+  try { if (window.i18n && typeof i18n.extend === 'function') i18n.extend(I18N_DAILY); } catch (_) {}
   // Apply translations to the page
   try { if (typeof translatePage === 'function') translatePage(); } catch(_) {}
 

@@ -5,16 +5,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize language and UI
   setLang(getLang());
-  // Extend i18n keys for this page
+  // Extend i18n keys for this page via centralized i18n
   const extraI18N = {
     en: { 'scream.title': 'Guess the Pokémon!', 'scream.play': 'Play', 'scream.pause': 'Pause', 'scream.replay': 'Replay' },
     es: { 'scream.title': 'Adivina el Pokémon!', 'scream.play': 'Reproducir', 'scream.pause': 'Pausar', 'scream.replay': 'Repetir' },
     fr: { 'scream.title': 'Devinez le Pokémon!', 'scream.play': 'Lire', 'scream.pause': 'Pause', 'scream.replay': 'Rejouer' },
     de: { 'scream.title': 'Errate das Pokémon!', 'scream.play': 'Abspielen', 'scream.pause': 'Pause', 'scream.replay': 'Erneut' },
   };
-  try {
-    Object.keys(extraI18N).forEach(l => { Object.assign(I18N[l] = I18N[l] || {}, extraI18N[l]); });
-  } catch (_) {}
+  try { if (window.i18n && typeof i18n.extend === 'function') i18n.extend(extraI18N); } catch (_) {}
   translatePage();
 
   // Guessed list component
@@ -27,34 +25,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadStats();
   updateHUD();
 
-  // Preload names for current language
-  try { await preloadNames(getLang()); } catch (_) {}
-
-  const langSel = document.getElementById('lang-select');
-  if (langSel) {
-    langSel.value = getLang();
-    langSel.addEventListener('change', async () => {
-      setLang(langSel.value);
-      translatePage();
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      renderGuessed();
-    });
-  }
-
-  const genSel = document.getElementById('gen-select');
-  if (genSel) {
-    setGenSelectValue(genSel, getGen());
-    genSel.addEventListener('change', async () => {
-      const csv = readGenSelect(genSel);
-      setGen(csv);
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      window.resetGuessed && window.resetGuessed();
-      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
-      else { newRoundScream(); }
-    });
-  }
+  // Centralized wiring via initMode
+  try { initMode({ id: 'scream' }); } catch(_) {}
 
   const audioEl = document.getElementById('cry-audio');
   // Set a slightly reduced default volume so cries aren't too loud by default
@@ -313,6 +285,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Ensure audio controls are wired when using the engine
     try { wireAudioControls(); } catch(_) {}
     RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    try { initMode({ id: 'scream' }); } catch(_) {}
     return; // skip legacy flow
   }
 

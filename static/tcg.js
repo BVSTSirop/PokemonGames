@@ -17,34 +17,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadStats();
   updateHUD();
 
-  // Preload names for current language
-  try { await preloadNames(getLang()); } catch (_) {}
-
-  const langSel = document.getElementById('lang-select');
-  if (langSel) {
-    langSel.value = getLang();
-    langSel.addEventListener('change', async () => {
-      setLang(langSel.value);
-      translatePage && translatePage();
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      renderGuessed();
-    });
-  }
-
-  const genSel = document.getElementById('gen-select');
-  if (genSel) {
-    setGenSelectValue(genSel, getGen());
-    genSel.addEventListener('change', async () => {
-      const csv = readGenSelect(genSel);
-      setGen(csv);
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      window.resetGuessed && window.resetGuessed();
-      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
-      else { newRoundTCG(); }
-    });
-  }
+  // Centralized wiring via initMode
+  try { initMode({ id: 'tcg' }); } catch(_) {}
 
   async function newRoundTCG() {
     if (typeof resetOnAbandon === 'function') { resetOnAbandon(); }
@@ -152,6 +126,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const onWrong = () => { try { setCardBlur((state.attemptsWrong||0)); } catch(_) {} };
     const onReveal = () => { const el = document.getElementById('card-crop'); try { el.style.filter=''; el.style.backgroundSize='contain'; el.style.backgroundPosition='center center'; } catch(_) {} };
     RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    try { initMode({ id: 'tcg' }); } catch(_) {}
     return; // skip legacy flow
   }
 

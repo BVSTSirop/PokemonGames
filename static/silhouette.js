@@ -17,35 +17,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadStats();
   updateHUD();
 
-  // Preload names for current language
-  try { await preloadNames(getLang()); } catch (_) {}
-
-  const langSel = document.getElementById('lang-select');
-  if (langSel) {
-    langSel.value = getLang();
-    langSel.addEventListener('change', async () => {
-      setLang(langSel.value);
-      translatePage && translatePage();
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      renderGuessed();
-    });
-  }
-
-  const genSel = document.getElementById('gen-select');
-  if (genSel) {
-    setGenSelectValue(genSel, getGen());
-    genSel.addEventListener('change', async () => {
-      const csv = readGenSelect(genSel);
-      setGen(csv);
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      window.resetGuessed && window.resetGuessed();
-      // If engine is active, trigger next(); otherwise fallback newRound
-      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
-      else { try { newRoundSilhouette(); } catch(_) {} }
-    });
-  }
+  // Centralized wiring via initMode
+  try { initMode({ id: 'silhouette' }); } catch(_) {}
 
   // If the new RoundEngine is available, use it and skip legacy wiring
   if (window.RoundEngine) {
@@ -96,6 +69,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       } catch(_) {}
     };
     RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
+    try { initMode({ id: 'silhouette' }); } catch(_) {}
     return; // skip legacy flow
   }
 

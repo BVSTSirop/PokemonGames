@@ -6,11 +6,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Ensure language attribute is set and preload names
   if (typeof setLang === 'function') setLang(getLang());
-  try { if (typeof preloadNames === 'function') await preloadNames(getLang()); } catch (_) {}
-
-  // Load stats if available and update HUD
-  if (typeof loadStats === 'function') loadStats();
-  if (typeof updateHUD === 'function') updateHUD();
+  // initMode will preload names, load stats and wire controls
 
   // Guessed list component
   const guessed = (window.GuessedList && GuessedList.create({ containerId: 'guessed-list' })) || null;
@@ -104,28 +100,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       // nothing special beyond feedback
     };
     RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
-    // adjust language/gen handlers to use engine
-    const langSel2 = document.getElementById('lang-select');
-    if (langSel2) {
-      langSel2.value = getLang();
-      langSel2.addEventListener('change', async () => {
-        setLang(langSel2.value);
-        try { await preloadNames(getLang()); } catch(_) {}
-        if (guessed && guessed.render) guessed.render();
-        RoundEngine.next();
-      });
-    }
-    const genSel2 = document.getElementById('gen-select');
-    if (genSel2) {
-      if (typeof setGenSelectValue === 'function') setGenSelectValue(genSel2, getGen());
-      genSel2.addEventListener('change', async () => {
-        const csv = (typeof readGenSelect === 'function') ? readGenSelect(genSel2) : (genSel2.value || 'all');
-        setGen(csv);
-        try { await preloadNames(getLang()); } catch(_) {}
-        window.resetGuessed && window.resetGuessed();
-        RoundEngine.next();
-      });
-    }
+    try { initMode({ id: 'entry' }); } catch(_) {}
     return; // skip legacy wiring below
   }
 
@@ -195,32 +170,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     nextBtn.addEventListener('click', () => newRound());
   }
 
-  // Handle language changes
-  const langSel = document.getElementById('lang-select');
-  if (langSel) {
-    langSel.value = getLang();
-    langSel.addEventListener('change', async () => {
-      setLang(langSel.value);
-      try { await preloadNames(getLang()); } catch (_) {}
-      // Re-render guessed list in potentially different language
-      try { guessed && guessed.render && guessed.render(); } catch(_) {}
-      // Get a new entry in the selected language
-      newRound();
-    });
-  }
-  // Handle generation changes
-  const genSel = document.getElementById('gen-select');
-  if (genSel) {
-    if (typeof setGenSelectValue === 'function') setGenSelectValue(genSel, getGen());
-    genSel.addEventListener('change', async () => {
-      const csv = (typeof readGenSelect === 'function') ? readGenSelect(genSel) : (genSel.value || 'all');
-      setGen(csv);
-      try { await preloadNames(getLang()); } catch (_) {}
-      // Reset guessed and start new round for selected generation(s)
-      window.resetGuessed && window.resetGuessed();
-      newRound();
-    });
-  }
+  // Centralized wiring for legacy path
+  try { initMode({ id: 'entry', legacyStart: newRound }); } catch(_) {}
 
   // Start first round
   newRound();

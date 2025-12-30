@@ -326,205 +326,7 @@ function initGenDropdown() {
   });
 }
 
-// --- Simple client-side i18n ---
-const I18N = {
-  en: {
-    'nav.guess': 'Sprite',
-        'nav.scream': 'Scream',
-    'nav.silhouette': 'Silhouette',
-    'nav.pixelate': 'Pixelate',
-    'nav.cards': 'Cards',
-    'nav.pokedex': 'Pokédex',
-    'nav.daily': 'Daily',
-    'lang.label': 'Language',
-    'game.title': 'Guess the Pokémon!',
-    'form.label': 'Your guess',
-    'form.placeholder': 'Type a Pokémon name...',
-    'form.guessBtn': 'Guess',
-    'controls.reveal': 'Reveal',
-    'controls.next': 'Next',
-    'gen.label.all': 'All Generations',
-    'gen.label.gen': 'Gen {n}',
-    'gen.label.more': '+{n} more',
-    'gen.select.title': 'Select generations',
-    'gen.menu.label': 'Generations',
-    'gen.disabledHint': 'Generation selection is disabled in Daily mode',
-    'aria.menu.open': 'Open menu',
-    'aria.spriteCrop': 'Cropped Pokémon sprite',
-    'aria.suggestions': 'Suggestions',
-    'feedback.correct': 'Correct! It is {name}',
-    'feedback.reveal': 'It was {name}',
-    'feedback.wrong': 'Nope, try again!',
-    'hud.score': 'Score',
-    'hud.streak': 'Streak',
-    'hints.title': 'Hints',
-    'hints.first': 'Starts with {letter}',
-    'hints.color': 'Color: {color}',
-    'hints.gen': 'Gen: {n}',
-    'hints.silhouette': 'Silhouette',
-    // Label-only variants for static UI (no placeholders)
-    'hints.label.first': 'Starts with',
-    'hints.label.color': 'Color',
-    'hints.label.gen': 'Generation'
-  },
-  es: {
-    'nav.guess': 'Sprite',
-        'nav.scream': 'Grito',
-    'nav.silhouette': 'Silueta',
-    'nav.pixelate': 'Pixelado',
-    'nav.cards': 'Cartas',
-    'nav.pokedex': 'Pokédex',
-    'nav.daily': 'Diario',
-    'lang.label': 'Idioma',
-    'game.title': '¡Adivina el Pokémon!',
-    'form.label': 'Tu respuesta',
-    'form.placeholder': 'Escribe un nombre de Pokémon...',
-    'form.guessBtn': 'Adivinar',
-    'controls.reveal': 'Revelar',
-    'controls.next': 'Siguiente',
-    'gen.label.all': 'Todas las generaciones',
-    'gen.label.gen': 'Gen {n}',
-    'gen.label.more': '+{n} más',
-    'gen.select.title': 'Seleccionar generaciones',
-    'gen.menu.label': 'Generaciones',
-    'gen.disabledHint': 'La selección de generaciones está deshabilitada en el modo Diario',
-    'aria.menu.open': 'Abrir menú',
-    'aria.spriteCrop': 'Sprite de Pokémon recortado',
-    'aria.suggestions': 'Sugerencias',
-    'feedback.correct': '¡Correcto! Es {name}',
-    'feedback.reveal': 'Era {name}',
-    'feedback.wrong': '¡No! Intenta de nuevo.',
-    'hud.score': 'Puntuación',
-    'hud.streak': 'Racha',
-    'hints.title': 'Pistas',
-    'hints.first': 'Empieza con {letter}',
-    'hints.color': 'Color: {color}',
-    'hints.gen': 'Gen: {n}',
-    'hints.silhouette': 'Silueta',
-    'hints.label.first': 'Empieza con',
-    'hints.label.color': 'Color',
-    'hints.label.gen': 'Generación'
-  },
-  fr: {
-    'nav.guess': 'Sprite',
-        'nav.scream': 'Cri',
-    'nav.silhouette': 'Silhouette',
-    'nav.pixelate': 'Pixélisé',
-    'nav.cards': 'Cartes',
-    'nav.pokedex': 'Pokédex',
-    'nav.daily': 'Quotidien',
-    'lang.label': 'Langue',
-    'game.title': 'Devinez le Pokémon!',
-    'form.label': 'Votre réponse',
-    'form.placeholder': 'Saisissez un nom de Pokémon…',
-    'form.guessBtn': 'Deviner',
-    'controls.reveal': 'Révéler',
-    'controls.next': 'Suivant',
-    'gen.label.all': 'Toutes les générations',
-    'gen.label.gen': 'Gen {n}',
-    'gen.label.more': '+{n} de plus',
-    'gen.select.title': 'Sélectionner des générations',
-    'gen.menu.label': 'Générations',
-    'gen.disabledHint': 'La sélection des générations est désactivée en mode Quotidien',
-    'aria.menu.open': 'Ouvrir le menu',
-    'aria.spriteCrop': 'Sprite de Pokémon recadré',
-    'aria.suggestions': 'Suggestions',
-    'feedback.correct': 'Correct ! C’est {name}',
-    'feedback.reveal': 'C’était {name}',
-    'feedback.wrong': 'Non, réessayez !',
-    'hud.score': 'Score',
-    'hud.streak': 'Série',
-    'hints.title': 'Indices',
-    'hints.first': 'Commence par {letter}',
-    'hints.color': 'Couleur : {color}',
-    'hints.gen': 'Gén : {n}',
-    'hints.silhouette': 'Silhouette',
-    'hints.label.first': 'Commence par',
-    'hints.label.color': 'Couleur',
-    'hints.label.gen': 'Génération'
-  },
-  de: {
-    'nav.guess': 'Sprite',
-        'nav.scream': 'Schrei',
-    'nav.silhouette': 'Silhouette',
-    'nav.pixelate': 'Verpixelt',
-    'nav.cards': 'Karten',
-    'nav.pokedex': 'Pokédex',
-    'nav.daily': 'Täglich',
-    'lang.label': 'Sprache',
-    'game.title': 'Errate das Pokémon!',
-    'form.label': 'Dein Tipp',
-    'form.placeholder': 'Gib einen Pokémon-Namen ein…',
-    'form.guessBtn': 'Raten',
-    'controls.reveal': 'Aufdecken',
-    'controls.next': 'Weiter',
-    'gen.label.all': 'Alle Generationen',
-    'gen.label.gen': 'Gen {n}',
-    'gen.label.more': '+{n} mehr',
-    'gen.select.title': 'Generationen auswählen',
-    'gen.menu.label': 'Generationen',
-    'gen.disabledHint': 'Die Generationsauswahl ist im Tagesmodus deaktiviert',
-    'aria.menu.open': 'Menü öffnen',
-    'aria.spriteCrop': 'Zugeschnittener Pokémon-Sprite',
-    'aria.suggestions': 'Vorschläge',
-    'feedback.correct': 'Richtig! Es ist {name}',
-    'feedback.reveal': 'Es war {name}',
-    'feedback.wrong': 'Falsch, versuche es nochmal!',
-    'hud.score': 'Punkte',
-    'hud.streak': 'Serie',
-    'hints.title': 'Hinweise',
-    'hints.first': 'Beginnt mit {letter}',
-    'hints.color': 'Farbe: {color}',
-    'hints.gen': 'Gen: {n}',
-    'hints.silhouette': 'Silhouette',
-    'hints.label.first': 'Beginnt mit',
-    'hints.label.color': 'Farbe',
-    'hints.label.gen': 'Generation'
-  }
-};
-
-function getLang() {
-  const saved = localStorage.getItem('lang');
-  if (saved && I18N[saved]) return saved;
-  const nav = (navigator.language || 'en').toLowerCase();
-  const base = nav.split('-')[0];
-  return I18N[base] ? base : 'en';
-}
-function setLang(lang) {
-  const l = I18N[lang] ? lang : 'en';
-  localStorage.setItem('lang', l);
-  document.documentElement.setAttribute('lang', l);
-}
-function t(key, params = {}) {
-  const lang = getLang();
-  const bundle = I18N[lang] || I18N.en;
-  let s = bundle[key] || I18N.en[key] || key;
-  Object.entries(params).forEach(([k, v]) => {
-    s = s.replace(new RegExp('{' + k + '}', 'g'), v);
-  });
-  return s;
-}
-function translatePage() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    const attr = el.getAttribute('data-i18n-attr');
-    const val = t(key);
-    if (attr) {
-      el.setAttribute(attr, val);
-    } else {
-      el.textContent = val;
-    }
-  });
-  // Sync selector UI values
-  const langSel = document.getElementById('lang-select');
-  if (langSel) langSel.value = getLang();
-  const genSel = document.getElementById('gen-select');
-  if (genSel) {
-    setGenSelectValue(genSel, getGen());
-    // Also reflect to the fancy dropdown label/checkboxes
-    try { syncGenDropdownFromSelect(); } catch(_) {}
-  }
-}
+// i18n is centralized in static/i18n.js. Use global helpers: getLang, setLang, t, translatePage.
 
 // --- Hints helper ---
 function resetHints() {
@@ -793,7 +595,7 @@ function normalizeName(s) {
 }
 
 async function preloadNames(lang) {
-  const l = I18N[lang] ? lang : 'en';
+  const l = (typeof lang === 'string' && lang) ? lang : (typeof getLang==='function' ? getLang() : 'en');
   const g = getGen();
   const key = namesCacheKey(l, g);
   if (ALL_NAMES[key]) return ALL_NAMES[key];
@@ -850,52 +652,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-game="sprite"]')) {
     return;
   }
-  // Initialize language and UI
+  // Initialize language translations
   setLang(getLang());
   translatePage();
-
-  // Guessed list component (switch to shared component)
-  const guessed = (window.GuessedList && GuessedList.create({ containerId: 'guessed-list' })) || null;
-  window.getExcludeNames = () => (guessed ? guessed.set : new Set());
-  window.resetGuessed = () => { guessed && guessed.clear(); };
-  window.noteGuessed = (name) => { guessed && guessed.add(name); };
-
-  // Load stats and update HUD
-  loadStats();
-  updateHUD();
-
-  // Preload names for current language
-  try { await preloadNames(getLang()); } catch (_) {}
-  // Hook up language selector
-  const langSel = document.getElementById('lang-select');
-  if (langSel) {
-    langSel.value = getLang();
-    langSel.addEventListener('change', async () => {
-      setLang(langSel.value);
-      translatePage();
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      // Re-render guessed chips with possibly localized names
-      try { guessed && guessed.render && guessed.render(); } catch(_) {}
-      // If using engine, advance to a fresh round in new language
-      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
-    });
-  }
-  // Hook up generation selector
-  const genSel = document.getElementById('gen-select');
-  if (genSel) {
-    setGenSelectValue(genSel, getGen());
-    genSel.addEventListener('change', async () => {
-      const csv = readGenSelect(genSel);
-      setGen(csv);
-      hideSuggestions();
-      try { await preloadNames(getLang()); } catch (_) {}
-      // Reset guessed list as pool changed
-      window.resetGuessed && window.resetGuessed();
-      // Start a fresh round in the selected generation(s)
-      if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} } else { newRound(); }
-    });
-  }
 
   // If RoundEngine is available, use it and skip legacy listeners
   if (window.RoundEngine) {
@@ -947,7 +706,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
     const onReveal = () => { try { revealFullSprite(); } catch(_) {} };
     RoundEngine.start({ fetchRound, onRoundLoaded, onCorrect, onWrong, onReveal, checkUrl: '/api/check-guess' });
-    return; // skip legacy flow
+    try { initMode({ id: 'sprite' }); } catch(_) {}
+    return; // engine path
   }
 
   // Start a new round
@@ -1030,3 +790,71 @@ window.addEventListener('DOMContentLoaded', async () => {
     newRound();
   });
 });
+
+// -------- Mode bootstrap consistency --------
+// Idempotent initializer that wires language/gen dropdowns, preloads names and starts the first round
+// Usage per page: initMode({ id: 'sprite'|'entry'|'scream'|'pixelate'|'silhouette'|'tcg'|'daily', onLangChange?, onGenChange?, legacyStart? })
+function initMode({ id = 'global', onLangChange, onGenChange, legacyStart } = {}){
+  try {
+    const key = `modeInited:${id}`;
+    if (document.body && document.body.dataset[key]) return; // idempotent
+    if (document.body) document.body.dataset[key] = '1';
+
+    // Stats and HUD once
+    try { loadStats(); updateHUD(); } catch(_) {}
+
+    // Ensure guessed list component exists if container is present
+    try {
+      const hasChips = document.getElementById('guessed-list');
+      if (hasChips && window.GuessedList){
+        if (!window.__guessedInstance){
+          window.__guessedInstance = GuessedList.create({ containerId: 'guessed-list' });
+          window.getExcludeNames = () => (window.__guessedInstance ? window.__guessedInstance.set : new Set());
+          window.resetGuessed = () => { window.__guessedInstance && window.__guessedInstance.clear(); };
+          window.noteGuessed = (name) => { window.__guessedInstance && window.__guessedInstance.add(name); };
+        }
+      }
+    } catch(_) {}
+
+    // Initial names
+    (async () => { try { await preloadNames(getLang()); } catch(_) {} })();
+
+    // Language selector
+    const langSel = document.getElementById('lang-select');
+    if (langSel){
+      try { langSel.value = getLang(); } catch(_) {}
+      langSel.addEventListener('change', async ()=>{
+        try { setLang(langSel.value); translatePage(); } catch(_) {}
+        try { hideSuggestions(); } catch(_) {}
+        try { await preloadNames(getLang()); } catch(_) {}
+        try { if (window.__guessedInstance && window.__guessedInstance.render) window.__guessedInstance.render(); } catch(_) {}
+        try { if (typeof onLangChange === 'function') onLangChange(); } catch(_) {}
+        // Do NOT start a new round on language change; keep current token/state
+      });
+    }
+
+    // Generation selector (skip for daily)
+    if (id !== 'daily'){
+      const genSel = document.getElementById('gen-select');
+      if (genSel){
+        try { setGenSelectValue(genSel, getGen()); } catch(_) {}
+        genSel.addEventListener('change', async ()=>{
+          try { const csv = readGenSelect(genSel); setGen(csv); } catch(_) {}
+          try { hideSuggestions(); } catch(_) {}
+          try { await preloadNames(getLang()); } catch(_) {}
+          try { window.resetGuessed && window.resetGuessed(); } catch(_) {}
+          try { if (typeof onGenChange === 'function') onGenChange(); } catch(_) {}
+          if (window.RoundEngine) { try { RoundEngine.next(); } catch(_) {} }
+          else if (typeof legacyStart === 'function') { try { legacyStart(); } catch(_) {} }
+        });
+      }
+    }
+
+    // Start first round if no engine auto-start
+    if (!window.RoundEngine && typeof legacyStart === 'function') {
+      try { legacyStart(); } catch(_) {}
+    }
+  } catch(_) {}
+}
+// expose globally
+window.initMode = initMode;
