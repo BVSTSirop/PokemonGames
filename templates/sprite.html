@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="game-layout" data-game="pixelate">
+<section class="game-layout" data-game="sprite">
   <div class="card game-card">
     <h2 class="game-title" data-i18n="game.title">Guess the Pokémon!</h2>
 
     {% include 'partials/hud.html' %}
 
     <div class="sprite-frame">
-      <canvas id="pixel-canvas" class="pixel-canvas" aria-label="Pixelated Pokémon sprite"></canvas>
+      <div id="sprite-crop" class="sprite-crop" aria-label="Cropped Pokémon sprite" data-i18n="aria.spriteCrop" data-i18n-attr="aria-label"></div>
       <div class="sprite-skeleton" aria-hidden="true"></div>
     </div>
 
@@ -18,7 +18,5 @@
     {% include 'partials/guessed.html' %}
     {% include 'partials/hints.html' %}
   </aside>
-
 </section>
-<script src="/static/pixelate.js" defer></script>
 {% endblock %}

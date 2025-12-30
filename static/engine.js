@@ -99,8 +99,13 @@
         const inputEl = document.getElementById('guess-input');
         if (inputEl && window.Suggestions && !inputEl.dataset.suggestionsWired){
           try {
-            const getEx = (typeof window.getExcludeNames === 'function') ? window.getExcludeNames : (() => new Set());
-            Suggestions.init({ inputEl, getExcludeNames: getEx });
+            // Defer resolution of the exclusion set to call-time so guessed list
+            // added after engine wiring is respected.
+            const dynamicEx = () => {
+              try { return (typeof window.getExcludeNames === 'function') ? window.getExcludeNames() : new Set(); }
+              catch(_) { return new Set(); }
+            };
+            Suggestions.init({ inputEl, getExcludeNames: dynamicEx });
             inputEl.dataset.suggestionsWired = 'true';
           } catch(_) {}
         }

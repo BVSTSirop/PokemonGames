@@ -1,39 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="game card" data-game="silhouette">
-  <h2 class="game-title" data-i18n="game.title">Guess the Pokémon!</h2>
+<section class="game-layout" data-game="silhouette">
+  <div class="card game-card">
+    <h2 class="game-title" data-i18n="game.title">Guess the Pokémon!</h2>
 
-  <div class="hud">
-    <div class="hud-item"><span>Score</span>: <strong id="hud-score">0</strong></div>
-    <div class="hud-item"><span>Streak</span>: <strong id="hud-streak">0</strong></div>
-  </div>
+    {% include 'partials/hud.html' %}
 
-  <div class="sprite-frame">
-    <div id="sprite-crop" class="sprite-crop silhouette" aria-label="Silhouette of a Pokémon"></div>
-    <div class="sprite-skeleton" aria-hidden="true"></div>
-  </div>
-
-  <form id="guess-form" class="guess-form" autocomplete="off">
-    <label class="visually-hidden" for="guess-input">Your guess</label>
-    <div class="input-wrap">
-      <input id="guess-input" name="guess" placeholder="Type a Pokémon name..." autocomplete="off" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" />
-      <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5 1.5-1.5-5-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions"></div>
+    <div class="sprite-frame">
+      <div id="sprite-crop" class="sprite-crop silhouette" aria-label="Silhouette of a Pokémon"></div>
+      <div class="sprite-skeleton" aria-hidden="true"></div>
     </div>
-    <button class="btn btn-primary" type="submit">Guess</button>
-  </form>
 
-  <div id="guessed-wrap" class="guessed-wrap" aria-live="polite">
-    <span class="guessed-title">Guessed:</span>
-    <div id="guessed-list" class="guessed-list"></div>
+    {% include 'partials/guess_form.html' %}
   </div>
 
-  <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
-  <div id="hints" class="hints" aria-live="polite"></div>
-  <div class="controls">
-    <button class="btn" id="reveal-btn" type="button">Reveal</button>
-    <button class="btn btn-accent" id="next-btn" type="button">Next</button>
-  </div>
+  <aside class="card info-card" aria-label="Guessed and Hints">
+    {% include 'partials/guessed.html' %}
+    {% include 'partials/hints.html' %}
+  </aside>
 </section>
 <script src="/static/silhouette.js" defer></script>
 {% endblock %}

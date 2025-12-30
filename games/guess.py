@@ -30,7 +30,7 @@ TOKENS = {}  # token -> { 'name': str, 'id': int }
 
 @bp.route('/')
 def index():
-    return render_template('guess.html', active_page='guess')
+    return render_template('sprite.html', active_page='guess')
 
 
 @bp.route('/api/all-names')

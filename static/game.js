@@ -61,12 +61,22 @@ function showFeedback(type, text){
   try {
     const fb = document.getElementById('feedback');
     if (!fb) return;
-    fb.textContent = String(text || '');
+    const msg = String(text == null ? '' : text);
+    const trimmed = msg.trim();
+    if (!trimmed) {
+      // Hide feedback area when empty
+      fb.textContent = '';
+      fb.className = 'feedback';
+      fb.setAttribute('aria-hidden', 'true');
+      return;
+    }
+    fb.textContent = msg;
     let cls = 'feedback prominent';
     if (type === 'correct') cls += ' correct';
     else if (type === 'wrong') cls += ' incorrect';
     else if (type === 'reveal') cls += ' reveal';
     fb.className = cls;
+    fb.removeAttribute('aria-hidden');
   } catch(_) {}
 }
 

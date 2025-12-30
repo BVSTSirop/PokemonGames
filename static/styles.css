@@ -129,11 +129,69 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
 .btn-accent{background:linear-gradient(90deg,#3b4cca,#5b6df8)}
 
 .feedback{min-height:24px;margin:10px 0;font-weight:800}
+/* Hide feedback containers when they have no content */
+.feedback:empty{display:none}
+/* Also respect aria-hidden for programmatic hiding */
+.feedback[aria-hidden="true"]{display:none}
 .feedback.prominent{font-size:20px; line-height:1.3; padding:10px 12px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,.25)}
 /* Make feedback backgrounds solid and non-transparent for better contrast */
 .correct{background:#1e7f33; color:#ffffff; border:1px solid #145523; text-shadow:0 1px 0 rgba(0,0,0,.25)}
 .reveal{background:#b38f00; color:#ffffff; border:1px solid #7a6200; text-shadow:0 1px 0 rgba(0,0,0,.25)}
 .incorrect{background:#c0261d; color:#ffffff; border:1px solid #7a1612; text-shadow:0 1px 0 rgba(0,0,0,.25)}
+
+/* --- Two-card layout (Game + Info) --- */
+.game-layout{display:grid; grid-template-columns:1fr; gap:16px; align-items:start}
+@media (min-width: 900px){
+    .game-layout{grid-template-columns:minmax(0,1fr) 360px}
+}
+.game-card{}
+.info-card{align-self:start; position:sticky; top:16px}
+@media (max-width: 899px){
+  .info-card{position:static}
+}
+
+/* --- Guessed section: make it a subtly distinct card --- */
+.guessed-wrap{
+  margin-top: 16px;
+  margin-bottom: 16px; /* space it away from the hints section */
+  padding: 12px 12px 8px;
+  background: rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+}
+.guessed-wrap .guessed-title{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #444;
+  margin: 0 0 8px 0;
+}
+.guessed-list{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+/* Ensure the legacy hints box (if visible) is separated from guessed */
+#hints{ margin-top: 6px; }
+
+@media (prefers-color-scheme: dark){
+  .guessed-wrap{
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.12);
+  }
+  .guessed-wrap .guessed-title{ color: #ddd; }
+  .guessed-wrap .guessed-title::before{
+    box-shadow: 0 0 0 2px rgba(255,204,1,0.2);
+  }
+}
+
+/* --- Section separators --- */
+.form-separator{border:0;border-top:1px solid rgba(0,0,0,.1);margin:12px 0 16px 0}
+@media (prefers-color-scheme: dark){
+  .form-separator{border-top-color: rgba(255,255,255,.12)}
+}
 
 /* Generic alerts (non-breaking; optional usage) */
 .alert{border-radius:12px;padding:10px 12px;font-weight:800}
