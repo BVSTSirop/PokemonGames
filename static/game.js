@@ -473,8 +473,8 @@ function revealHintAt(level) {
     const li = document.createElement('li');
     li.dataset.hint = 'silhouette';
     const thumb = document.createElement('div');
-    thumb.style.width = '80px';
-    thumb.style.height = '80px';
+    thumb.style.width = '50px';
+    thumb.style.height = '50px';
     thumb.style.backgroundImage = `url(${meta.sprite})`;
     thumb.style.backgroundSize = 'contain';
     thumb.style.backgroundRepeat = 'no-repeat';
@@ -568,8 +568,8 @@ try {
           const wrap = document.createElement('div');
           wrap.dataset.hint = 'silhouette';
           const thumb = document.createElement('div');
-          thumb.style.width = '80px';
-          thumb.style.height = '80px';
+          thumb.style.width = '50px';
+          thumb.style.height = '50px';
           thumb.style.backgroundImage = `url(${meta.sprite})`;
           thumb.style.backgroundSize = 'contain';
           thumb.style.backgroundRepeat = 'no-repeat';

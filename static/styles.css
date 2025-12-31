@@ -211,7 +211,7 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
 }
 #hints .hints-list li > *:first-child{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 #hints .hints-list [data-hint="silhouette"] > div:last-child{
-  width:80px; height:80px; flex:0 0 auto; border-radius:8px; overflow:hidden;
+  width:50px; height:50px; flex:0 0 auto; border-radius:8px; overflow:hidden;
   background-size:contain; background-repeat:no-repeat; background-position:center; filter:brightness(0) saturate(100%); opacity:.9
 }
 
@@ -252,15 +252,15 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
 .hint-timeline .timeline-step.revealed .dot{background:#34c759;border-color:#1e7f33;box-shadow:0 0 0 2px rgba(52,199,89,.25)}
 .hint-timeline .timeline-step.revealed .label{color:#b8f7c8}
 /* Accordion content inside timeline steps */
-.hint-timeline .timeline-step .accordion-content{display:none;margin-top:8px;padding:6px 8px;border-radius:10px;background:#0b1130;border:1px solid #27306a;width:100%;max-width:220px;color:var(--text);font-weight:700;text-align:center;pointer-events:auto}
+.hint-timeline .timeline-step .accordion-content{display:none;margin-top:8px;padding:6px 8px;border-radius:10px;background:#0b1130;border:1px solid #27306a;width:fit-content;max-width:100%;margin-left:auto;margin-right:auto;box-sizing:border-box;color:var(--text);font-weight:700;text-align:center;pointer-events:auto}
 .hint-timeline .timeline-step.open .accordion-content{display:block}
 .hint-timeline .timeline-step .accordion-content{overflow:hidden}
 .hint-timeline .timeline-step .accordion-content [data-hint]{
-  display:flex; flex-direction:column; align-items:center; gap:8px;
+  display:flex; flex-direction:column; align-items:center; gap:8px; min-height:0;
 }
 .hint-timeline .timeline-step .accordion-content .silhouette-thumb,
 .hint-timeline .timeline-step .accordion-content [data-hint="silhouette"] > div:last-child{
-  width:80px;height:80px;margin:6px auto 0;background-size:contain;background-repeat:no-repeat;background-position:center center;filter:brightness(0) saturate(100%);opacity:.9;border-radius:8px;display:block;flex:0 0 auto
+  width:50px;height:50px;margin:6px auto 0;background-size:contain !important;background-repeat:no-repeat !important;background-position:center center !important;filter:brightness(0) saturate(100%);opacity:.9;border-radius:8px;display:block;flex:0 0 auto
 }
 .hint-timeline .timeline-step .accordion-content [data-hint]{min-height:0}
 /* Capitalize text-only hint values as a safety fallback */
@@ -273,6 +273,8 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
 @media (max-width:560px){
   .hint-timeline .timeline-track{gap:4px}
   .hint-timeline .timeline-step .label{font-size:12px;max-width:80px}
+  .hint-timeline .timeline-step .accordion-content .silhouette-thumb,
+  .hint-timeline .timeline-step .accordion-content [data-hint="silhouette"] > div:last-child{width:50px;height:50px}
 }
 
 /* Daily table with colored cells instead of pills */
