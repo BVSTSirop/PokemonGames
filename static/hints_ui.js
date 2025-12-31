@@ -18,6 +18,17 @@
     }catch(_){ return 'Hint ' + String(level); }
   }
 
+  function unlockedLabel(level){
+    try{
+      if (typeof t !== 'function') return null;
+      if (level === 1) return t('hints.stepLabel.gen');
+      if (level === 2) return t('hints.stepLabel.color');
+      if (level === 3) return t('hints.stepLabel.first');
+      if (level === 4) return t('hints.stepLabel.silhouette');
+      return null;
+    }catch(_){ return null; }
+  }
+
   function getStepByLevel(level){
     const levelToTh = {1:3,2:5,3:7,4:10};
     return document.querySelector(`#hint-timeline .timeline-step[data-level="${level}"]`) ||
@@ -117,7 +128,11 @@
             steps.forEach(step => {
               const level = parseInt(step.getAttribute('data-level')||'0',10) || 0;
               const label = step.querySelector('.label');
-              if (label) label.textContent = stepLabel(level, forcedLang);
+              if (!label) return;
+              const isActive = step.classList.contains('active');
+              const txt = isActive ? (unlockedLabel(level) || stepLabel(level, forcedLang))
+                                   : stepLabel(level, forcedLang);
+              label.textContent = txt;
             });
           }catch(_){ }
         };
@@ -177,7 +192,15 @@
           else if (lvl === 4) can = !!meta && !!meta.sprite; // Silhouette needs an image
         } catch(_) { can = true; }
         const should = (wrong >= th) && can;
+        const wasActive = step.classList.contains('active');
         step.classList.toggle('active', !!should);
+        if (should !== wasActive) {
+          const lblEl = step.querySelector('.label');
+          if (lblEl) {
+            const txt = should ? (unlockedLabel(lvl) || stepLabel(lvl)) : stepLabel(lvl);
+            lblEl.textContent = txt;
+          }
+        }
       });
       dbg('updateTimeline wrong=', wrong);
     }catch(_){ }

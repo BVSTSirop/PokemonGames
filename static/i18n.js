@@ -32,13 +32,19 @@
       'hud.streak': 'Streak',
       'guessed.title': 'Guessed:',
       'hints.title': 'Hints',
-      'hints.first': 'Starts with {letter}',
-      'hints.color': 'Color: {color}',
-      'hints.gen': 'Gen: {n}',
-      'hints.silhouette': 'Silhouette',
+      'hints.first': '{letter}',
+      'hints.color': '{color}',
+      'hints.gen': '{n}',
+      // aria-only key for screen readers (no visible text in UI)
+      'aria.hint.silhouette': 'Silhouette hint',
       'hints.label.first': 'Starts with',
       'hints.label.color': 'Color',
-      'hints.label.gen': 'Generation'
+      'hints.label.gen': 'Generation',
+      // Short labels for hint timeline steps once unlocked
+      'hints.stepLabel.gen': 'Gen',
+      'hints.stepLabel.color': 'Color',
+      'hints.stepLabel.first': 'Starts with',
+      'hints.stepLabel.silhouette': 'Silhouette'
     },
     es: {
       'nav.guess': 'Sprite',
@@ -71,13 +77,19 @@
       'hud.streak': 'Racha',
       'guessed.title': 'Adivinados:',
       'hints.title': 'Pistas',
-      'hints.first': 'Empieza con {letter}',
-      'hints.color': 'Color: {color}',
-      'hints.gen': 'Gen: {n}',
-      'hints.silhouette': 'Silueta',
+      'hints.first': '{letter}',
+      'hints.color': '{color}',
+      'hints.gen': '{n}',
+      // Clave solo para aria (lectores de pantalla)
+      'aria.hint.silhouette': 'Pista de silueta',
       'hints.label.first': 'Empieza con',
       'hints.label.color': 'Color',
-      'hints.label.gen': 'Generación'
+      'hints.label.gen': 'Generación',
+      // Etiquetas cortas para pasos de pistas al desbloquearse
+      'hints.stepLabel.gen': 'Gen',
+      'hints.stepLabel.color': 'Color',
+      'hints.stepLabel.first': 'Empieza con',
+      'hints.stepLabel.silhouette': 'Silueta'
     },
     fr: {
       'nav.guess': 'Sprite',
@@ -110,13 +122,19 @@
       'hud.streak': 'Série',
       'guessed.title': 'Proposés\u00A0:',
       'hints.title': 'Indices',
-      'hints.first': 'Commence par {letter}',
-      'hints.color': 'Couleur : {color}',
-      'hints.gen': 'Génération : {n}',
-      'hints.silhouette': 'Silhouette',
+      'hints.first': '{letter}',
+      'hints.color': '{color}',
+      'hints.gen': '{n}',
+      // Clé aria uniquement (lecteurs d’écran)
+      'aria.hint.silhouette': 'Indice silhouette',
       'hints.label.first': 'Commence par',
       'hints.label.color': 'Couleur',
-      'hints.label.gen': 'Génération'
+      'hints.label.gen': 'Génération',
+      // Libellés courts pour la timeline des indices
+      'hints.stepLabel.gen': 'Gén.',
+      'hints.stepLabel.color': 'Couleur',
+      'hints.stepLabel.first': 'Commence par',
+      'hints.stepLabel.silhouette': 'Silhouette'
     },
     de: {
       'nav.guess': 'Sprite',
@@ -149,13 +167,19 @@
       'hud.streak': 'Serie',
       'guessed.title': 'Geraten:',
       'hints.title': 'Hinweise',
-      'hints.first': 'Beginnt mit {letter}',
-      'hints.color': 'Farbe: {color}',
-      'hints.gen': 'Gen: {n}',
-      'hints.silhouette': 'Silhouette',
+      'hints.first': '{letter}',
+      'hints.color': '{color}',
+      'hints.gen': '{n}',
+      // Nur für aria (Screenreader)
+      'aria.hint.silhouette': 'Silhouetten-Hinweis',
       'hints.label.first': 'Beginnt mit',
       'hints.label.color': 'Farbe',
-      'hints.label.gen': 'Generation'
+      'hints.label.gen': 'Generation',
+      // Kurze Beschriftungen für freigeschaltete Hinweise
+      'hints.stepLabel.gen': 'Gen',
+      'hints.stepLabel.color': 'Farbe',
+      'hints.stepLabel.first': 'Beginnt mit',
+      'hints.stepLabel.silhouette': 'Silhouette'
     }
   };
 

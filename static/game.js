@@ -429,7 +429,10 @@ function revealHintAt(level) {
     const first = name.trim().charAt(0) || '?';
     const li = document.createElement('li');
     li.dataset.hint = 'first';
-    li.textContent = t('hints.first', { letter: first });
+    // Visible value only, capitalized
+    li.textContent = String(first).toUpperCase();
+    // Accessibility label preserves full text
+    try { li.setAttribute('aria-label', t('hints.first', { letter: first })); } catch(_) {}
     list.appendChild(li);
     state.hintLevel = Math.max(state.hintLevel || 0, 1);
     dbgHints('revealHintAt(1): appended hint', first);
@@ -440,7 +443,12 @@ function revealHintAt(level) {
     if (has('color')) { dbgHints('revealHintAt(2): already revealed'); return false; }
     const li = document.createElement('li');
     li.dataset.hint = 'color';
-    li.textContent = t('hints.color', { color: meta.color });
+    // Capitalize visible color value
+    try {
+      const c = String(meta.color || '');
+      li.textContent = c ? (c.charAt(0).toUpperCase() + c.slice(1)) : c;
+    } catch(_) { li.textContent = String(meta.color); }
+    try { li.setAttribute('aria-label', t('hints.color', { color: meta.color })); } catch(_) {}
     list.appendChild(li);
     state.hintLevel = Math.max(state.hintLevel || 0, 2);
     dbgHints('revealHintAt(2): appended color', meta.color);
@@ -451,7 +459,9 @@ function revealHintAt(level) {
     if (has('generation')) { dbgHints('revealHintAt(3): already revealed'); return false; }
     const li = document.createElement('li');
     li.dataset.hint = 'generation';
-    li.textContent = t('hints.gen', { n: meta.generation });
+    // Visible numeric value only
+    li.textContent = String(meta.generation);
+    try { li.setAttribute('aria-label', t('hints.gen', { n: meta.generation })); } catch(_) {}
     list.appendChild(li);
     state.hintLevel = Math.max(state.hintLevel || 0, 3);
     dbgHints('revealHintAt(3): appended generation', meta.generation);
@@ -462,8 +472,6 @@ function revealHintAt(level) {
     if (has('silhouette')) { dbgHints('revealHintAt(4): already revealed'); return false; }
     const li = document.createElement('li');
     li.dataset.hint = 'silhouette';
-    const label = document.createElement('div');
-    label.textContent = t('hints.silhouette');
     const thumb = document.createElement('div');
     thumb.style.width = '80px';
     thumb.style.height = '80px';
@@ -473,8 +481,7 @@ function revealHintAt(level) {
     thumb.style.backgroundPosition = 'center';
     thumb.style.filter = 'brightness(0) saturate(100%)';
     thumb.style.opacity = '0.9';
-    thumb.setAttribute('aria-label', t('hints.silhouette'));
-    li.appendChild(label);
+    try { thumb.setAttribute('aria-label', (typeof t==='function') ? t('aria.hint.silhouette') : 'Silhouette hint'); } catch(_) {}
     li.appendChild(thumb);
     list.appendChild(li);
     state.hintLevel = Math.max(state.hintLevel || 0, 4);
@@ -532,7 +539,8 @@ try {
           if (!meta || !meta.generation) return null;
           const wrap = document.createElement('div');
           wrap.dataset.hint = 'generation';
-          wrap.textContent = t('hints.gen', { n: meta.generation });
+          wrap.textContent = String(meta.generation);
+          try { wrap.setAttribute('aria-label', (typeof t==='function') ? t('hints.gen', { n: meta.generation }) : `Gen: ${meta.generation}`); } catch(_) {}
           return wrap;
         },
         2: () => {
@@ -540,7 +548,8 @@ try {
           if (!meta || !meta.color) return null;
           const wrap = document.createElement('div');
           wrap.dataset.hint = 'color';
-          wrap.textContent = t('hints.color', { color: meta.color });
+          try { const c = String(meta.color||''); wrap.textContent = c ? (c.charAt(0).toUpperCase()+c.slice(1)) : c; } catch(_) { wrap.textContent = String(meta.color); }
+          try { wrap.setAttribute('aria-label', (typeof t==='function') ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`); } catch(_) {}
           return wrap;
         },
         3: () => {
@@ -549,7 +558,8 @@ try {
           const first = name.trim().charAt(0) || '?';
           const wrap = document.createElement('div');
           wrap.dataset.hint = 'first';
-          wrap.textContent = t('hints.first', { letter: first });
+          wrap.textContent = String(first).toUpperCase();
+          try { wrap.setAttribute('aria-label', (typeof t==='function') ? t('hints.first', { letter: first }) : `Starts with ${first}`); } catch(_) {}
           return wrap;
         },
         4: () => {
@@ -557,8 +567,6 @@ try {
           if (!meta || !meta.sprite) return null;
           const wrap = document.createElement('div');
           wrap.dataset.hint = 'silhouette';
-          const label = document.createElement('div');
-          label.textContent = t('hints.silhouette');
           const thumb = document.createElement('div');
           thumb.style.width = '80px';
           thumb.style.height = '80px';
@@ -568,8 +576,7 @@ try {
           thumb.style.backgroundPosition = 'center';
           thumb.style.filter = 'brightness(0) saturate(100%)';
           thumb.style.opacity = '0.9';
-          thumb.setAttribute('aria-label', t('hints.silhouette'));
-          wrap.appendChild(label);
+          try { thumb.setAttribute('aria-label', (typeof t==='function') ? t('aria.hint.silhouette') : 'Silhouette hint'); } catch(_) {}
           wrap.appendChild(thumb);
           return wrap;
         }

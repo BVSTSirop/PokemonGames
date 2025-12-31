@@ -529,37 +529,37 @@ window.addEventListener('DOMContentLoaded', async ()=>{
       const name = state.answer || '';
       const meta = state.meta || {};
       if (level === 1){
-        // Generation first
+        // Generation first (value only)
         if (!meta.generation) return false;
         const wrap = document.createElement('div');
         wrap.dataset.hint = 'generation';
-        wrap.textContent = t ? t('hints.gen', { n: meta.generation }) : `Gen: ${meta.generation}`;
+        wrap.textContent = String(meta.generation);
+        try { wrap.setAttribute('aria-label', t ? t('hints.gen', { n: meta.generation }) : `Gen: ${meta.generation}`); } catch(_) {}
         panel.appendChild(wrap);
       } else if (level === 2){
         if (!meta.color) return false;
         const wrap = document.createElement('div');
         wrap.dataset.hint = 'color';
-        wrap.textContent = t ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`;
+        try { const c = String(meta.color||''); wrap.textContent = c ? (c.charAt(0).toUpperCase()+c.slice(1)) : c; } catch(_) { wrap.textContent = String(meta.color); }
+        try { wrap.setAttribute('aria-label', t ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`); } catch(_) {}
         panel.appendChild(wrap);
       } else if (level === 3){
-        // Starts with becomes third
+        // Starts with becomes third (value only)
         if (!name) return false;
         const first = name.trim().charAt(0) || '?';
         const wrap = document.createElement('div');
         wrap.dataset.hint = 'first';
-        wrap.textContent = t ? t('hints.first', { letter: first }) : `Starts with ${first}`;
+        wrap.textContent = String(first).toUpperCase();
+        try { wrap.setAttribute('aria-label', t ? t('hints.first', { letter: first }) : `Starts with ${first}`); } catch(_) {}
         panel.appendChild(wrap);
       } else if (level === 4){
         if (!meta.sprite) return false;
         const wrap = document.createElement('div');
         wrap.dataset.hint = 'silhouette';
-        const label = document.createElement('div');
-        label.textContent = t ? t('hints.silhouette') : 'Silhouette';
         const thumb = document.createElement('div');
         thumb.className = 'silhouette-thumb';
         thumb.style.backgroundImage = `url(${meta.sprite})`;
-        thumb.setAttribute('aria-label', label.textContent);
-        wrap.appendChild(label);
+        try { thumb.setAttribute('aria-label', t ? t('aria.hint.silhouette') : 'Silhouette hint'); } catch(_) {}
         wrap.appendChild(thumb);
         panel.appendChild(wrap);
       } else { return false; }
@@ -584,7 +584,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
               if (!meta || !meta.generation) return null;
               const wrap = document.createElement('div');
               wrap.dataset.hint = 'generation';
-              wrap.textContent = (typeof t==='function') ? t('hints.gen', { n: meta.generation }) : `Gen: ${meta.generation}`;
+              wrap.textContent = String(meta.generation);
+              try { wrap.setAttribute('aria-label', (typeof t==='function') ? t('hints.gen', { n: meta.generation }) : `Gen: ${meta.generation}`); } catch(_) {}
               return wrap;
             },
             2: () => {
@@ -592,7 +593,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
               if (!meta || !meta.color) return null;
               const wrap = document.createElement('div');
               wrap.dataset.hint = 'color';
-              wrap.textContent = (typeof t==='function') ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`;
+              try { const c = String(meta.color||''); wrap.textContent = c ? (c.charAt(0).toUpperCase()+c.slice(1)) : c; } catch(_) { wrap.textContent = String(meta.color); }
+              try { wrap.setAttribute('aria-label', (typeof t==='function') ? t('hints.color', { color: meta.color }) : `Color: ${meta.color}`); } catch(_) {}
               return wrap;
             },
             3: () => {
@@ -601,7 +603,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
               const first = name.trim().charAt(0) || '?';
               const wrap = document.createElement('div');
               wrap.dataset.hint = 'first';
-              wrap.textContent = (typeof t==='function') ? t('hints.first', { letter: first }) : `Starts with ${first}`;
+              wrap.textContent = String(first).toUpperCase();
+              try { wrap.setAttribute('aria-label', (typeof t==='function') ? t('hints.first', { letter: first }) : `Starts with ${first}`); } catch(_) {}
               return wrap;
             },
             4: () => {
@@ -609,13 +612,10 @@ window.addEventListener('DOMContentLoaded', async ()=>{
               if (!meta || !meta.sprite) return null;
               const wrap = document.createElement('div');
               wrap.dataset.hint = 'silhouette';
-              const label = document.createElement('div');
-              label.textContent = (typeof t==='function') ? t('hints.silhouette') : 'Silhouette';
               const thumb = document.createElement('div');
               thumb.className = 'silhouette-thumb';
               thumb.style.backgroundImage = `url(${meta.sprite})`;
-              thumb.setAttribute('aria-label', label.textContent);
-              wrap.appendChild(label);
+              try { thumb.setAttribute('aria-label', (typeof t==='function') ? t('aria.hint.silhouette') : 'Silhouette hint'); } catch(_) {}
               wrap.appendChild(thumb);
               return wrap;
             }
