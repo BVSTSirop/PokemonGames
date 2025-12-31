@@ -1,7 +1,28 @@
 :root{--bg:#0b1021;--bg-soft:#12183a;--card:#0f1631;--text:#f5f7ff;--muted:#c9d0ff;--accent:#ffcc01;--accent-2:#e3350d;--accent-3:#3b4cca;--ok:#34c759;--err:#ff3b30;--shadow:0 8px 24px rgba(16,24,40,.35);--glass:rgba(10,15,35,.65);--glass-border:#27306a}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:linear-gradient(180deg,var(--bg) 0%,#0d1230 100%);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+/* Ensure the background fills the entire screen on mobile, even when the URL bar shows/hides */
+html{
+  /* Put the page background on html so overscroll and dynamic viewport changes stay covered */
+  background:linear-gradient(180deg,var(--bg) 0%,#0d1230 100%);
+  background-color:var(--bg);
+  /* Helps some mobile browsers keep the paint consistent when scrolling */
+  background-attachment:fixed;
+}
+body{
+  font-family:Montserrat,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  margin:0;
+  /* Let html carry the background so we avoid gaps; body stays transparent */
+  background:transparent;
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  /* Use dynamic viewport units when available; fall back to 100vh */
+  min-height:100vh;
+  min-height:100svh;
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column
+}
 
 .container{max-width:960px;margin:0 auto;padding:16px}
 
