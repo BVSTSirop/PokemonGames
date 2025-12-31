@@ -257,6 +257,28 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
   .daily-table thead th{font-size:11px}
 }
 
+/* Mobile: turn Daily table rows into stacked cards for readability */
+@media (max-width: 768px){
+  /* Avoid double scrollbars around the table */
+  .table-wrap{overflow:visible}
+  /* Hide header row; show labels via td::before */
+  .daily-table thead{display:none}
+  .daily-table{border-spacing:0}
+  .daily-table tbody{display:block}
+  .daily-table tbody tr{display:block; width:100%; margin:12px 0; border:1px solid #27306a; border-radius:12px; box-shadow:var(--shadow); overflow:hidden; background:#0c1330}
+  /* Make cells stack with inline labels */
+  .daily-table tbody td{display:grid; grid-template-columns: 44% 1fr; gap:8px; padding:10px 12px; border-right:none; border-bottom:1px solid #27306a; text-align:left}
+  .daily-table tbody td:last-child{border-bottom:none}
+  .daily-table tbody td::before{content:attr(data-label); font-weight:800; color:#9aa3e0}
+  /* Emphasize the name cell */
+  .daily-table tbody td[data-col="name"]{font-size:16px; font-weight:800}
+  /* Keep capitalization for readable text columns */
+  .daily-table tbody td[data-col="name"],
+  .daily-table tbody td[data-col="type1"],
+  .daily-table tbody td[data-col="type2"],
+  .daily-table tbody td[data-col="color"]{ text-transform:capitalize }
+}
+
 .visually-hidden{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px, 1px, 1px, 1px);white-space:nowrap}
 
 /* Pokédex entry styling */

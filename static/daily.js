@@ -252,10 +252,19 @@ function renderRow(guess, animate = false){
 
   const tr = document.createElement('tr');
   // Create a table cell with content and a status class mapped for cell coloring
-  const td = (html, status = '') => {
+  // Adds data-label (for mobile stacked view) and data-col (for targeting in CSS)
+  const td = (html, status = '', colKey = '', labelKey = '') => {
     const c = document.createElement('td');
     c.style.padding = '8px';
     c.innerHTML = html;
+    try {
+      if (colKey) c.setAttribute('data-col', colKey);
+      // Prefer explicit label text from i18n key; fallback to provided labelKey if it's already text
+      if (labelKey) {
+        const txt = (typeof t === 'function' && /\./.test(labelKey)) ? t(labelKey) : String(labelKey);
+        c.setAttribute('data-label', txt);
+      }
+    } catch(_) {}
     // Binary mapping: only 'correct' (or legacy 'same') is green; everything else red
     const cl = (status === 'correct' || status === 'same') ? 'correct' : (status ? 'incorrect' : '');
     if (cl) c.classList.add(cl);
@@ -267,7 +276,7 @@ function renderRow(guess, animate = false){
     if (d==='lower') return `<span title="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}" aria-label="${(typeof t==='function'? t('daily.arrow.lower'):'Correct is lower')}">▼</span>`;
     return '';
   };
-  tr.appendChild(td(guess.name));
+  tr.appendChild(td(guess.name, '', 'name', 'daily.th.name'));
   const types = guess.types.value || [];
   const none = (typeof t==='function'? t('daily.none'):'-');
   const type1 = types[0] ? localizeType(types[0]) : none;
@@ -276,13 +285,13 @@ function renderRow(guess, animate = false){
   if (isAnswerRow) {
     tStatuses = ['correct','correct'];
   }
-  tr.appendChild(td(type1, tStatuses[0] || 'wrong'));
-  tr.appendChild(td(type2, tStatuses[1] || 'wrong'));
+  tr.appendChild(td(type1, tStatuses[0] || 'wrong', 'type1', 'daily.th.type1'));
+  tr.appendChild(td(type2, tStatuses[1] || 'wrong', 'type2', 'daily.th.type2'));
   const genLabel = guess.generation.value ? `Gen ${guess.generation.value}` : '?';
   const genStatus = isAnswerRow ? 'correct' : (guess.generation.status || 'wrong');
   const genDir = isAnswerRow ? null : (guess.generation.dir || null);
   const genCell = `${arrowFor(genDir, guess.generation.status)} ${genLabel}`.trim();
-  tr.appendChild(td(genCell, genStatus));
+  tr.appendChild(td(genCell, genStatus, 'gen', 'daily.th.gen'));
   // Evolution: display only the numeric stage (1, 2, or 3) with directional arrow
   const evoStage = guess.evo_stage;
   const evoStageStatus = isAnswerRow ? 'correct' : (evoStage ? (evoStage.status || 'wrong') : 'wrong');
@@ -294,7 +303,7 @@ function renderRow(guess, animate = false){
     }
     const evoDir = isAnswerRow ? null : (evoStage.dir || null);
     const evoCell = `${arrowFor(evoDir, evoStage.status)} ${evoLabel}`.trim();
-    tr.appendChild(td(evoCell, evoStageStatus));
+    tr.appendChild(td(evoCell, evoStageStatus, 'evo', 'daily.th.evo'));
   } else {
     // Fallback to legacy categorical labels
     const evoMap = {
@@ -305,7 +314,7 @@ function renderRow(guess, animate = false){
       unrelated: (typeof t==='function'? t('daily.evo.unrelated'):'Unrelated')
     };
     const evVal = isAnswerRow ? 'same' : (guess.evolution.value || 'unrelated');
-    tr.appendChild(td(evoMap[evVal]||evVal, evVal==='same'?'correct':(evVal==='unrelated'?'incorrect':'partial')));
+    tr.appendChild(td(evoMap[evVal]||evVal, evVal==='same'?'correct':(evVal==='unrelated'?'incorrect':'partial'), 'evo', 'daily.th.evo'));
   }
   const mUnit = (typeof t==='function'? t('daily.units.m'):'m');
   const kgUnit = (typeof t==='function'? t('daily.units.kg'):'kg');
@@ -317,11 +326,11 @@ function renderRow(guess, animate = false){
   const wDir = isAnswerRow ? null : (guess.weight.dir || null);
   const hTxt = `${arrowFor(hDir, guess.height.status)} ${hTxtBase}`.trim();
   const wTxt = `${arrowFor(wDir, guess.weight.status)} ${wTxtBase}`.trim();
-  tr.appendChild(td(hTxt, hStatus));
-  tr.appendChild(td(wTxt, wStatus));
+  tr.appendChild(td(hTxt, hStatus, 'height', 'daily.th.height'));
+  tr.appendChild(td(wTxt, wStatus, 'weight', 'daily.th.weight'));
   const colorStatus = isAnswerRow ? 'correct' : guess.color.status;
   const colorText = guess.color.value ? localizeColor(guess.color.value) : '-';
-  tr.appendChild(td(colorText, colorStatus));
+  tr.appendChild(td(colorText, colorStatus, 'color', 'daily.th.color'));
   const rowsEl = document.getElementById('rows');
   if (rowsEl.firstChild) {
     rowsEl.insertBefore(tr, rowsEl.firstChild);
