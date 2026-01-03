@@ -289,23 +289,32 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
 .daily-table td.cell-hidden{opacity:0; transform:translateY(4px) scale(.98)}
 .daily-table td.correct,.daily-table td.reveal,.daily-table td.incorrect{border-right-color:rgba(0,0,0,.25); border-bottom-color:rgba(0,0,0,.25)}
 /* Capitalize readable text columns (Pokémon, Type 1, Type 2, Color) */
-.daily-table tbody td:nth-child(1),
 .daily-table tbody td:nth-child(2),
 .daily-table tbody td:nth-child(3),
-.daily-table tbody td:nth-child(8){ text-transform:capitalize }
+.daily-table tbody td:nth-child(4),
+.daily-table tbody td:nth-child(9){ text-transform:capitalize }
+
+.daily-table td[data-col="sprite"] img {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
 /* Rounded corners for the table by masking first/last cells */
 .daily-table thead th:first-child{border-top-left-radius:12px}
 .daily-table thead th:last-child{border-top-right-radius:12px}
 .daily-table tr:last-child td:first-child{border-bottom-left-radius:12px}
 .daily-table tr:last-child td:last-child{border-bottom-right-radius:12px}
 /* Column alignment: center numeric-ish columns */
-.daily-table td:nth-child(2),
+.daily-table td:nth-child(1),
 .daily-table td:nth-child(3),
 .daily-table td:nth-child(4),
 .daily-table td:nth-child(5),
 .daily-table td:nth-child(6),
 .daily-table td:nth-child(7),
-.daily-table td:nth-child(8){text-align:center}
+.daily-table td:nth-child(8),
+.daily-table td:nth-child(9){text-align:center}
 /* Responsive adjustments */
 @media (max-width: 640px){
   .daily-table th,.daily-table td{padding:8px 8px}
@@ -322,9 +331,11 @@ h3{font-size:18px;line-height:1.25;margin:10px 0 6px;font-weight:800;color:#e6e9
   .daily-table tbody{display:block}
   .daily-table tbody tr{display:block; width:100%; margin:12px 0; border:1px solid #27306a; border-radius:12px; box-shadow:var(--shadow); overflow:hidden; background:#0c1330}
   /* Make cells stack with inline labels */
-  .daily-table tbody td{display:grid; grid-template-columns: 44% 1fr; gap:8px; padding:10px 12px; border-right:none; border-bottom:1px solid #27306a; text-align:left}
+  .daily-table tbody td{display:grid; grid-template-columns: 44% 1fr; gap:8px; padding:10px 12px; border-right:none; border-bottom:1px solid #27306a; text-align:left; align-items:center}
   .daily-table tbody td:last-child{border-bottom:none}
   .daily-table tbody td::before{content:attr(data-label); font-weight:800; color:#9aa3e0}
+  /* Center sprite in mobile stack */
+  .daily-table tbody td[data-col="sprite"] img{margin-left:0!important}
   /* Emphasize the name cell */
   .daily-table tbody td[data-col="name"]{font-size:16px; font-weight:800}
   /* Keep capitalization for readable text columns */

@@ -424,8 +424,16 @@ def api_guess():
     guess_name = get_localized_name(gus.get('species_id') or guess_id, lang)
     answer_name = get_localized_name(ans.get('species_id') or answer_id, lang)
 
+    # Fetch sprite
+    sprite_url = ''
+    try:
+        sprite_url, _ = get_sprite_for_pokemon(gus.get('species_id') or guess_id)
+    except Exception:
+        sprite_url = ''
+
     fb = {
         'name': guess_name,
+        'sprite': sprite_url,
         'species_id': gus.get('species_id') or guess_id,
         'types': {'value': gus['types'], 'status': type_statuses},
         # Binary status; dir carries 'higher'/'lower' hint when wrong

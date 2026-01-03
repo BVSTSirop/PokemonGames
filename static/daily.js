@@ -13,6 +13,7 @@ const I18N_DAILY = {
     'daily.title': 'Daily Pokédle',
     'daily.prompt': 'Guess today’s Pokémon!',
     'daily.reset': 'Reset',
+    'daily.th.sprite': 'Sprite',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Type 1',
     'daily.th.type2': 'Type 2',
@@ -44,6 +45,7 @@ const I18N_DAILY = {
     'daily.title': 'Pokédle diario',
     'daily.prompt': '¡Adivina el Pokémon de hoy!',
     'daily.reset': 'Reiniciar',
+    'daily.th.sprite': 'Sprite',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Tipo 1',
     'daily.th.type2': 'Tipo 2',
@@ -74,6 +76,7 @@ const I18N_DAILY = {
     'daily.title': 'Pokédle du jour',
     'daily.prompt': 'Devinez le Pokémon du jour!',
     'daily.reset': 'Réinitialiser',
+    'daily.th.sprite': 'Sprite',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Type 1',
     'daily.th.type2': 'Type 2',
@@ -104,6 +107,7 @@ const I18N_DAILY = {
     'daily.title': 'Tägliches Pokédle',
     'daily.prompt': 'Errate das heutige Pokémon!',
     'daily.reset': 'Zurücksetzen',
+    'daily.th.sprite': 'Sprite',
     'daily.th.name': 'Pokémon',
     'daily.th.type1': 'Typ 1',
     'daily.th.type2': 'Typ 2',
@@ -270,6 +274,10 @@ function renderRow(guess, animate = false){
     if (cl) c.classList.add(cl);
     return c;
   };
+
+  const spriteHtml = guess.sprite ? `<img src="${guess.sprite}" alt="${guess.name}">` : '-';
+  tr.appendChild(td(spriteHtml, '', 'sprite', 'daily.th.sprite'));
+
   const arrowFor = (dir, legacyStatus)=>{
     const d = dir || legacyStatus;
     if (d==='higher') return `<span title="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}" aria-label="${(typeof t==='function'? t('daily.arrow.higher'):'Correct is higher')}">▲</span>`;
